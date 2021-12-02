@@ -1,0 +1,18 @@
+---
+title: "ISLR Ch.2"
+output: github_document
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook.
+When you execute code within the notebook, the results appear beneath the code.
+
+```{r, include = FALSE}
+library(tidyverse)
+library(ISLR2)
+library(ggpubr)
+```
+
+### ex. 1
