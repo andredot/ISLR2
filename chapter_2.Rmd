@@ -16,3 +16,14 @@ library(ggpubr)
 ```
 
 ### ex. 1
+
+**Describe the null hypotheses to which the p-values given in Table 3.4 correspond. Explain what conclusions you can draw based on these p-values. Your explanation should be phrased in terms of sales, TV, radio, and newspaper, rather than in terms of the coefficients of the linear model.**
+
+- p-value of "intercept" is the probability that if there were no relationships in Advertising data, the resulting intercept which represent sales (obtained by fitting a linear model with TV, radio and newspaper predictors) would be different from 0, when no money is spent on predictors
+- p-value of TV/Radio/Newspaper represent the probability that if there was no relationship between sales and money spent on TV/Radio/Newspaper, the change in sales for each euro spent on TV/Radio/Newspaper advertisement would be different from 0
+- in general the null hypothesis is that money spent on TV or Radio or Newspapers are not correlated to the average sales of the product measured in the database (thus every pattern we see in the dataset is random)
+
+### ex. 2
+
+**Carefully explain the differences between the KNN classifier and KNN regression methods**
+
