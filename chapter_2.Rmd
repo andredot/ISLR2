@@ -13,6 +13,8 @@ When you execute code within the notebook, the results appear beneath the code.
 library(tidyverse)
 library(ISLR2)
 library(ggpubr)
+library(MASS)
+library(car)
 ```
 
 ### ex. 1
@@ -107,4 +109,78 @@ Using (3.4), argue that in the case of simple linear regression, the least squar
 Help
 
 ### ex. 8
+
+**This question involves the use of simple linear regression on the Auto data set.**
+
+**(a) Use the lm() function to perform a simple linear regression with mpg as the response and horsepower as the predictor. Use the summary() function to print the results. Comment on the output.**
+
+```{r}
+attach(Auto)
+lm.fit <- lm(mpg ∼ horsepower)
+summary(lm.fit)
+```
+
+For example:
+
+- i. Is there a relationship between the predictor and the response? **Yes, the probability that the pattern we observe is random is very remote**
+- ii. How strong is the relationship between the predictor and the response? **Even if the coefficient is near zero, the relationship is pretty strong because horspower can vary from 50 to 200, while mpg from 10 to 40**
+
+```{r, echo = FALSE, error = FALSE}
+plot(horsepower, mpg)
+abline(lm.fit , lwd = 3, col = "red")
+```
+
+- iii. Is the relationship between the predictor and the response positive or negative? **Negative, because the coefficient is negative**
+- iv. What is the predicted mpg associated with a horsepower of 98? What are the associated 95% confidence and prediction intervals?
+
+```{r}
+(confidence_interval = predict(lm.fit , list(horsepower = 98), interval = "confidence") )
+```
+
+```{r}
+(prediction_interval = predict(lm.fit , list(horsepower = 98), interval = "prediction") )
+```
+
+(c) Use the plot() function to produce diagnostic plots of the least squares regression fit. Comment on any problems you see with the fit. **we can see that residuals are not randomly distributed around 0, but they show a residual pattern not explained by the regression**
+
+```{r}
+plot(lm.fit) #instead of plot(predict(lm.fit), residuals(lm.fit))
+```
+
+### ex. 9
+
+**This question involves the use of multiple linear regression on the Auto data set.**
+
+**(a) Produce a scatterplot matrix which includes all of the variables in the data set**
+
+```{r}
+attach(Auto)
+pairs(Auto)
+```
+
+**(b) Compute the matrix of correlations between the variables using the function cor(). You will need to exclude the name variable, which is qualitative.**
+
+```{r}
+
+cor(Auto[,-name])
+```
+
+
+```{r}
+
+lm.fit <- lm(medv ∼ lstat , data = Boston)
+summary(lm.fit)
+
+coef(lm.fit) #instead of names(lm.fit)
+confint(lm.fit)
+
+predict(lm.fit , data.frame(lstat = (c(5, 10, 15))), interval = "prediction")
+
+attach(Boston)
+plot(lstat , medv)
+abline(lm.fit , lwd = 3, col = "red")
+
+par(mfrow = c(2, 2))
+plot(lm.fit)
+```
 
