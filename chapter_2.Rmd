@@ -15,6 +15,7 @@ library(ISLR2)
 library(ggpubr)
 library(MASS)
 library(car)
+library(dplyr)
 ```
 
 ### ex. 1
@@ -154,19 +155,200 @@ plot(lm.fit) #instead of plot(predict(lm.fit), residuals(lm.fit))
 **(a) Produce a scatterplot matrix which includes all of the variables in the data set**
 
 ```{r}
-attach(Auto)
-pairs(Auto)
+# old method
+# pairs(Auto)
+
+# new method (inspired by GitHub)
+auto <- Auto
+
+custom_function = function(data, mapping, method = "loess", ...){
+      p = ggplot(data = data, mapping = mapping) + 
+      geom_point() + 
+      geom_smooth(method=method, ...)
+      
+      p
+    }
+
+auto %>% 
+  dplyr::select(-name) %>%
+  GGally::ggpairs( lower = list(continuous = custom_function) )
+
 ```
 
 **(b) Compute the matrix of correlations between the variables using the function cor(). You will need to exclude the name variable, which is qualitative.**
 
 ```{r}
-
-cor(Auto[,-name])
+auto <- Auto
+auto %>% 
+  dplyr::select(-name) %>% 
+  cor()
 ```
 
+**(c) Use the lm() function to perform a multiple linear regression with mpg as the response and all other variables except name as the predictors. Use the summary() function to print the results.** 
 
 ```{r}
+auto_num <- auto %>% 
+  dplyr::select(-name) 
+
+lm.fit <- lm(mpg ~ .,
+             data = auto_num)
+
+summary(lm.fit)
+```
+
+**Comment on the output. For instance: **
+
+**i. Is there a relationship between the predictors and the response?** Yes, a relationship is definitely plausible
+**ii. Which predictors appear to have a statistically significant relationship to the response?** If we set a threashold of 0.01, "displacement" "weight" "year" and "origin" are low enough to refuse the hyphotesis of no relationship between each of them and "mpg"
+**iii. What does the coefficient for the year variable suggest?** Since it's positive, whenever year increases so does also mpg (and since the p-value is extremely low, we can be sure enough that there is a strong correlation between year and mpg). For each additional year, mpg increases by 0.75. Nevertheless, coefficient alone is not enough, considering also the error term, we can predict mpg with a standard error of ~7%.
+
+
+**(d) Use the plot() function to produce diagnostic plots of the linear regression fit. Comment on any problems you see with the fit. Do the residual plots suggest any unusually large outliers? Does the leverage plot identify any observations with unusually high leverage?**
+
+```{r}
+plot(lm.fit)
+```
+
+- evidence of non-linearity of the data: there is a modest evidence of non-linearity of the data. The U-shape of it suggest a transformation of predictors (quadratic?) may improve the fit
+- correlation of error terms: no evidence to support the claim that the error in prediction of a car could be influenced by the error of the previous one. But, it is plausible that for instance car from the same manufacturer could show a correlation of error terms
+- non-constant variance of error terms: there is cleare evidence of heteroscedasticity in the residuals vs fitted plot, as the error increases progressively. A concave transformation of the response would be advisable (log or sqrt, possibly)
+- outliers: all values are within 2 standard deviations, well withing tolerance ranges
+- high-leverage point: point 14 has high-leverage but a low standardized residual, so it doesn't affect the linear regression significantly
+- collinearity: can not be seen from diagnostic plot, but very likely (see (a) exercise)
+
+**(e) Use the * and : symbols to fit linear regression models with interaction effects. Do any interactions appear to be statistically significant?**
+
+```{r}
+#lm.fit.interact <- lm(mpg ~ cylinders + displacement *
+#                            horsepower * weight * acceleration * 
+#                            year * origin ,
+#                      data = auto_num)
+
+lm.fit.interact <- lm(mpg ~ cylinders +
+                        displacement +
+                        horsepower +
+                        weight +
+                        acceleration +
+                        year +
+                        origin +
+                        horsepower:cylinders +
+                        horsepower:origin +
+                        displacement:origin +
+                        horsepower:weight,
+                      data = auto_num)
+summary(lm.fit.interact)
+```
+
+First attempt: calculate all possible interaction terms (bad idea, no meaningful insight).
+Second attempt: to decide the interaction term to add, I plotted every variable against each other, selecting the combination that behaves roughly in a non-linear way. All pairs analyzed show a suggestive p-value.
+
+```{r}
+plot(lm.fit.interact)
+```
+
+From the residuals vs fitted graph we can see how the additional interaction terms have captured most of the residual pattern in the first lm.
+
+**(f) Try a few different transformations of the variables, such as log(X),
+√X, X^2. Comment on your findings**
+
+To select which variables to transform, I plotted every variable against the predictor (see the first column of ggpair plot in (a) ), trying to figure out which function to apply to linearize response:
+
+- cylinders, displacement, horsepower and weight seem that they would benefit from a log transform
+- acceleration and year are roughly linear so they don't need a transform
+- origin seem to benefit from a x^2 transform
+- regarding the 4 interaction terms, they were working before so it's difficult to understand if they should be adjusted
+
+```{r}
+lm.fit.trasform <- lm(mpg ~ log(cylinders) +
+                        log(displacement) +
+                        log(horsepower) +
+                        log(weight) +
+                        acceleration +
+                        year +
+                        I(origin^2) +
+                        horsepower:cylinders +
+                        horsepower:origin +
+                        displacement:origin +
+                        horsepower:weight,
+                      data = auto_num)
+summary(lm.fit.trasform)
+```
+
+The results are better than the lm.fit model but not significantly better than the lm.fit.interact one (and still with a persistent heteroscedasticity).
+
+Nevertheless, 86% of the variance is explained by the LM, an improvement of ~5% over the simple linear model.
+
+### ex. 10
+
+**This question should be answered using the Carseats data set.**
+
+**(a) Fit a multiple regression model to predict Sales using Price, Urban, and US.**
+
+```{r}
+carseats <- Carseats
+
+lm.fit.a <- lm( Sales ~ Price + Urban + US,
+                data = carseats)
+summary(lm.fit.a)
+```
+
+**(b) Provide an interpretation of each coefficient in the model. Be careful—some of the variables in the model are qualitative!**
+
+```{r}
+ggplot(carseats) + geom_density( mapping = aes(x=Price))
+```
+
+Consider that the model explain only a modest fraction (<25%) of the total variance.
+
+- coefficient of Price: slightly negative, but as can be seen from the plot price usually spans from 70 to 150 so change in Sales is not minimal. 
+- coefficient of UrbanYES: slightly negative but the standard error term is way bigger than the effect of being in a Urban area (vs being not), making this predictor useless
+- coefficient of USYES: Being in US moves the Sales 1.2 up, even if a standard error of 20% is observed, compared to being in another place
+
+**(c) Write out the model in equation form, being careful to handle the qualitative variables properly.**
+
+```{r, eval = FALSE}
+Sales = (+13.043469) +
+        Price * (-0.054459) +
+        Urban * (-0.021916) + # Urban can be only 1 (UrbanYes) or 0 (UrbanNo)
+        US *    (+1.200573)   # US can be only 1 (USYes) or 0 (USNo)
+```
+
+**(d) For which of the predictors can you reject the null hypothesis H0 : βj = 0?** For Price and US predictors
+
+**(e) On the basis of your response to the previous question, fit a smaller model that only uses the predictors for which there is evidence of association with the outcome.**
+
+```{r}
+# benchmark model (all predictors)
+lm.fit.bm <- lm( Sales ~ .,
+                data = carseats)
+# summary(lm.fit.bm)
+
+# exercise (e)
+lm.fit.e <- lm( Sales ~ Price + US,
+                data = carseats)
+summary(lm.fit.e)
+
+```
+
+**(f) How well do the models in (a) and (e) fit the data?** Basically in the same way, minimal differences are found in adjusted R-squared (amount of explained variance) and in RSE.
+
+**(g) Using the model from (e), obtain 95% confidence intervals for the coefficient(s)**
+
+```{r}
+confint(lm.fit.e)
+```
+
+**(h) Is there evidence of outliers or high leverage observations in the model from (e)?**
+
+```{r}
+plot(lm.fit.e)
+```
+
+Standardized errors and leverage are well withing acceptable ranges.
+
+## Quick recap
+
+```{r, eval = FALSE}
 
 lm.fit <- lm(medv ∼ lstat , data = Boston)
 summary(lm.fit)

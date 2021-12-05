@@ -172,3 +172,709 @@ Using (3.4), argue that in the case of simple linear regression, the
 least squares line always passes through the point (¯x, ¯y).
 
 ![Sketch of exercise](img/ch3_ex6_1.jpg)
+
+### ex. 7
+
+**It is claimed in the text that in the case of simple linear regression
+of Y onto X, the R2 statistic (3.17) is equal to the square of the
+correlation between X and Y (3.18). Prove that this is the case. For
+simplicity, you may assume that ¯x =¯y= 0**
+
+Help
+
+### ex. 8
+
+**This question involves the use of simple linear regression on the Auto
+data set.**
+
+**(a) Use the lm() function to perform a simple linear regression with
+mpg as the response and horsepower as the predictor. Use the summary()
+function to print the results. Comment on the output.**
+
+``` r
+attach(Auto)
+```
+
+    ## Il seguente oggetto è mascherato da package:ggplot2:
+    ## 
+    ##     mpg
+
+``` r
+lm.fit <- lm(mpg ∼ horsepower)
+summary(lm.fit)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = mpg ~ horsepower)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -13.5710  -3.2592  -0.3435   2.7630  16.9240 
+    ## 
+    ## Coefficients:
+    ##              Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) 39.935861   0.717499   55.66   <2e-16 ***
+    ## horsepower  -0.157845   0.006446  -24.49   <2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 4.906 on 390 degrees of freedom
+    ## Multiple R-squared:  0.6059, Adjusted R-squared:  0.6049 
+    ## F-statistic: 599.7 on 1 and 390 DF,  p-value: < 2.2e-16
+
+For example:
+
+-   1.  Is there a relationship between the predictor and the response?
+        **Yes, the probability that the pattern we observe is random is
+        very remote**
+
+-   2.  How strong is the relationship between the predictor and the
+        response? **Even if the coefficient is near zero, the
+        relationship is pretty strong because horspower can vary from 50
+        to 200, while mpg from 10 to 40**
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
+-   3.  Is the relationship between the predictor and the response
+        positive or negative? **Negative, because the coefficient is
+        negative**
+
+-   4.  What is the predicted mpg associated with a horsepower of 98?
+        What are the associated 95% confidence and prediction intervals?
+
+``` r
+(confidence_interval = predict(lm.fit , list(horsepower = 98), interval = "confidence") )
+```
+
+    ##        fit      lwr      upr
+    ## 1 24.46708 23.97308 24.96108
+
+``` r
+(prediction_interval = predict(lm.fit , list(horsepower = 98), interval = "prediction") )
+```
+
+    ##        fit     lwr      upr
+    ## 1 24.46708 14.8094 34.12476
+
+3.  Use the plot() function to produce diagnostic plots of the least
+    squares regression fit. Comment on any problems you see with the
+    fit. **we can see that residuals are not randomly distributed around
+    0, but they show a residual pattern not explained by the
+    regression**
+
+``` r
+plot(lm.fit) #instead of plot(predict(lm.fit), residuals(lm.fit))
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-8-3.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-8-4.png)<!-- -->
+
+### ex. 9
+
+**This question involves the use of multiple linear regression on the
+Auto data set.**
+
+**(a) Produce a scatterplot matrix which includes all of the variables
+in the data set**
+
+``` r
+# old method
+# pairs(Auto)
+
+# new method (inspired by GitHub)
+auto <- Auto
+
+custom_function = function(data, mapping, method = "loess", ...){
+      p = ggplot(data = data, mapping = mapping) + 
+      geom_point() + 
+      geom_smooth(method=method, ...)
+      
+      p
+    }
+
+auto %>% 
+  dplyr::select(-name) %>%
+  GGally::ggpairs( lower = list(continuous = custom_function) )
+```
+
+    ## Registered S3 method overwritten by 'GGally':
+    ##   method from   
+    ##   +.gg   ggplot2
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at 6
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 2
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 9.6355e-017
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at 6
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 2
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 9.6355e-017
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at 6
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 2
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 9.6355e-017
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at 6
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 2
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 9.6355e-017
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at 6
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 2
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 9.6355e-017
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at 6
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 2
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 9.6355e-017
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at 6
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 2
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 9.6355e-017
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at 6
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 2
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 9.6355e-017
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at 6
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 2
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 9.6355e-017
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at 6
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 2
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 9.6355e-017
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at 6
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 2
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 9.6355e-017
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at 6
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 2
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 9.6355e-017
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+
+**(b) Compute the matrix of correlations between the variables using the
+function cor(). You will need to exclude the name variable, which is
+qualitative.**
+
+``` r
+auto <- Auto
+auto %>% 
+  dplyr::select(-name) %>% 
+  cor()
+```
+
+    ##                     mpg  cylinders displacement horsepower     weight
+    ## mpg           1.0000000 -0.7776175   -0.8051269 -0.7784268 -0.8322442
+    ## cylinders    -0.7776175  1.0000000    0.9508233  0.8429834  0.8975273
+    ## displacement -0.8051269  0.9508233    1.0000000  0.8972570  0.9329944
+    ## horsepower   -0.7784268  0.8429834    0.8972570  1.0000000  0.8645377
+    ## weight       -0.8322442  0.8975273    0.9329944  0.8645377  1.0000000
+    ## acceleration  0.4233285 -0.5046834   -0.5438005 -0.6891955 -0.4168392
+    ## year          0.5805410 -0.3456474   -0.3698552 -0.4163615 -0.3091199
+    ## origin        0.5652088 -0.5689316   -0.6145351 -0.4551715 -0.5850054
+    ##              acceleration       year     origin
+    ## mpg             0.4233285  0.5805410  0.5652088
+    ## cylinders      -0.5046834 -0.3456474 -0.5689316
+    ## displacement   -0.5438005 -0.3698552 -0.6145351
+    ## horsepower     -0.6891955 -0.4163615 -0.4551715
+    ## weight         -0.4168392 -0.3091199 -0.5850054
+    ## acceleration    1.0000000  0.2903161  0.2127458
+    ## year            0.2903161  1.0000000  0.1815277
+    ## origin          0.2127458  0.1815277  1.0000000
+
+**(c) Use the lm() function to perform a multiple linear regression with
+mpg as the response and all other variables except name as the
+predictors. Use the summary() function to print the results.**
+
+``` r
+auto_num <- auto %>% 
+  dplyr::select(-name) 
+
+lm.fit <- lm(mpg ~ .,
+             data = auto_num)
+
+summary(lm.fit)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = mpg ~ ., data = auto_num)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -9.5903 -2.1565 -0.1169  1.8690 13.0604 
+    ## 
+    ## Coefficients:
+    ##                Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  -17.218435   4.644294  -3.707  0.00024 ***
+    ## cylinders     -0.493376   0.323282  -1.526  0.12780    
+    ## displacement   0.019896   0.007515   2.647  0.00844 ** 
+    ## horsepower    -0.016951   0.013787  -1.230  0.21963    
+    ## weight        -0.006474   0.000652  -9.929  < 2e-16 ***
+    ## acceleration   0.080576   0.098845   0.815  0.41548    
+    ## year           0.750773   0.050973  14.729  < 2e-16 ***
+    ## origin         1.426141   0.278136   5.127 4.67e-07 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 3.328 on 384 degrees of freedom
+    ## Multiple R-squared:  0.8215, Adjusted R-squared:  0.8182 
+    ## F-statistic: 252.4 on 7 and 384 DF,  p-value: < 2.2e-16
+
+**Comment on the output. For instance: **
+
+**i. Is there a relationship between the predictors and the response?**
+Yes, a relationship is definitely plausible **ii. Which predictors
+appear to have a statistically significant relationship to the
+response?** If we set a threashold of 0.01, “displacement” “weight”
+“year” and “origin” are low enough to refuse the hyphotesis of no
+relationship between each of them and “mpg” **iii. What does the
+coefficient for the year variable suggest?** Since it’s positive,
+whenever year increases so does also mpg (and since the p-value is
+extremely low, we can be sure enough that there is a strong correlation
+between year and mpg). For each additional year, mpg increases by 0.75.
+Nevertheless, coefficient alone is not enough, considering also the
+error term, we can predict mpg with a standard error of \~7%.
+
+**(d) Use the plot() function to produce diagnostic plots of the linear
+regression fit. Comment on any problems you see with the fit. Do the
+residual plots suggest any unusually large outliers? Does the leverage
+plot identify any observations with unusually high leverage?**
+
+``` r
+plot(lm.fit)
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-12-2.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-12-3.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-12-4.png)<!-- -->
+
+-   evidence of non-linearity of the data: there is a modest evidence of
+    non-linearity of the data. The U-shape of it suggest a
+    transformation of predictors (quadratic?) may improve the fit
+-   correlation of error terms: no evidence to support the claim that
+    the error in prediction of a car could be influenced by the error of
+    the previous one. But, it is plausible that for instance car from
+    the same manufacturer could show a correlation of error terms
+-   non-constant variance of error terms: there is cleare evidence of
+    heteroscedasticity in the residuals vs fitted plot, as the error
+    increases progressively. A concave transformation of the response
+    would be advisable (log or sqrt, possibly)
+-   outliers: all values are within 2 standard deviations, well withing
+    tolerance ranges
+-   high-leverage point: point 14 has high-leverage but a low
+    standardized residual, so it doesn’t affect the linear regression
+    significantly
+-   collinearity: can not be seen from diagnostic plot, but very likely
+    (see (a) exercise)
+
+**(e) Use the \* and : symbols to fit linear regression models with
+interaction effects. Do any interactions appear to be statistically
+significant?**
+
+``` r
+#lm.fit.interact <- lm(mpg ~ cylinders + displacement *
+#                            horsepower * weight * acceleration * 
+#                            year * origin ,
+#                      data = auto_num)
+
+lm.fit.interact <- lm(mpg ~ cylinders +
+                        displacement +
+                        horsepower +
+                        weight +
+                        acceleration +
+                        year +
+                        origin +
+                        horsepower:cylinders +
+                        horsepower:origin +
+                        displacement:origin +
+                        horsepower:weight,
+                      data = auto_num)
+summary(lm.fit.interact)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = mpg ~ cylinders + displacement + horsepower + weight + 
+    ##     acceleration + year + origin + horsepower:cylinders + horsepower:origin + 
+    ##     displacement:origin + horsepower:weight, data = auto_num)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -7.1673 -1.5541 -0.1332  1.3896 11.9345 
+    ## 
+    ## Coefficients:
+    ##                        Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)           8.411e+00  5.902e+00   1.425  0.15493    
+    ## cylinders            -1.845e+00  8.762e-01  -2.105  0.03591 *  
+    ## displacement         -2.288e-02  1.267e-02  -1.806  0.07176 .  
+    ## horsepower           -2.258e-01  5.695e-02  -3.965 8.76e-05 ***
+    ## weight               -7.923e-03  1.471e-03  -5.385 1.27e-07 ***
+    ## acceleration         -1.644e-01  9.044e-02  -1.817  0.06997 .  
+    ## year                  7.327e-01  4.566e-02  16.045  < 2e-16 ***
+    ## origin                1.068e+00  1.171e+00   0.913  0.36208    
+    ## cylinders:horsepower  1.669e-02  8.075e-03   2.067  0.03939 *  
+    ## horsepower:origin    -3.165e-02  1.804e-02  -1.754  0.08023 .  
+    ## displacement:origin   2.179e-02  9.950e-03   2.190  0.02912 *  
+    ## horsepower:weight     3.158e-05  1.045e-05   3.020  0.00269 ** 
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 2.891 on 380 degrees of freedom
+    ## Multiple R-squared:  0.8667, Adjusted R-squared:  0.8628 
+    ## F-statistic: 224.6 on 11 and 380 DF,  p-value: < 2.2e-16
+
+First attempt: calculate all possible interaction terms (bad idea, no
+meaningful insight). Second attempt: to decide the interaction term to
+add, I plotted every variable against each other, selecting the
+combination that behaves roughly in a non-linear way. All pairs analyzed
+show a suggestive p-value.
+
+``` r
+plot(lm.fit.interact)
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-14-2.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-14-3.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-14-4.png)<!-- -->
+
+From the residuals vs fitted graph we can see how the additional
+interaction terms have captured most of the residual pattern in the
+first lm.
+
+**(f) Try a few different transformations of the variables, such as
+log(X), √X, X^2. Comment on your findings**
+
+To select which variables to transform, I plotted every variable against
+the predictor (see the first column of ggpair plot in (a) ), trying to
+figure out which function to apply to linearize response:
+
+-   cylinders, displacement, horsepower and weight seem that they would
+    benefit from a log transform
+-   acceleration and year are roughly linear so they don’t need a
+    transform
+-   origin seem to benefit from a x^2 transform
+-   regarding the 4 interaction terms, they were working before so it’s
+    difficult to understand if they should be adjusted
+
+``` r
+lm.fit.trasform <- lm(mpg ~ log(cylinders) +
+                        log(displacement) +
+                        log(horsepower) +
+                        log(weight) +
+                        acceleration +
+                        year +
+                        I(origin^2) +
+                        horsepower:cylinders +
+                        horsepower:origin +
+                        displacement:origin +
+                        horsepower:weight,
+                      data = auto_num)
+summary(lm.fit.trasform)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = mpg ~ log(cylinders) + log(displacement) + log(horsepower) + 
+    ##     log(weight) + acceleration + year + I(origin^2) + horsepower:cylinders + 
+    ##     horsepower:origin + displacement:origin + horsepower:weight, 
+    ##     data = auto_num)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -7.7982 -1.6200 -0.1031  1.4001 12.1930 
+    ## 
+    ## Coefficients:
+    ##                        Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)           1.499e+02  1.760e+01   8.515 3.92e-16 ***
+    ## log(cylinders)       -1.842e+00  2.760e+00  -0.667 0.504951    
+    ## log(displacement)    -8.874e+00  2.727e+00  -3.254 0.001238 ** 
+    ## log(horsepower)      -3.769e+00  3.753e+00  -1.004 0.315813    
+    ## log(weight)          -1.530e+01  3.173e+00  -4.824 2.04e-06 ***
+    ## acceleration         -1.415e-01  9.726e-02  -1.455 0.146444    
+    ## year                  7.436e-01  4.539e-02  16.383  < 2e-16 ***
+    ## I(origin^2)          -4.381e-02  2.173e-01  -0.202 0.840331    
+    ## horsepower:cylinders  2.091e-03  4.233e-03   0.494 0.621644    
+    ## horsepower:origin    -4.667e-02  1.721e-02  -2.712 0.006985 ** 
+    ## origin:displacement   4.072e-02  1.135e-02   3.587 0.000378 ***
+    ## horsepower:weight     7.023e-06  6.480e-06   1.084 0.279108    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 2.868 on 380 degrees of freedom
+    ## Multiple R-squared:  0.8688, Adjusted R-squared:  0.865 
+    ## F-statistic: 228.7 on 11 and 380 DF,  p-value: < 2.2e-16
+
+The results are better than the lm.fit model but not significantly
+better than the lm.fit.interact one (and still with a persistent
+heteroscedasticity).
+
+Nevertheless, 86% of the variance is explained by the LM, an improvement
+of \~5% over the simple linear model.
+
+### ex. 10
+
+**This question should be answered using the Carseats data set.**
+
+**(a) Fit a multiple regression model to predict Sales using Price,
+Urban, and US.**
+
+``` r
+carseats <- Carseats
+
+lm.fit.a <- lm( Sales ~ Price + Urban + US,
+                data = carseats)
+summary(lm.fit.a)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = Sales ~ Price + Urban + US, data = carseats)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -6.9206 -1.6220 -0.0564  1.5786  7.0581 
+    ## 
+    ## Coefficients:
+    ##              Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) 13.043469   0.651012  20.036  < 2e-16 ***
+    ## Price       -0.054459   0.005242 -10.389  < 2e-16 ***
+    ## UrbanYes    -0.021916   0.271650  -0.081    0.936    
+    ## USYes        1.200573   0.259042   4.635 4.86e-06 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 2.472 on 396 degrees of freedom
+    ## Multiple R-squared:  0.2393, Adjusted R-squared:  0.2335 
+    ## F-statistic: 41.52 on 3 and 396 DF,  p-value: < 2.2e-16
+
+**(b) Provide an interpretation of each coefficient in the model. Be
+careful—some of the variables in the model are qualitative!**
+
+``` r
+ggplot(carseats) + geom_density( mapping = aes(x=Price))
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+
+Consider that the model explain only a modest fraction (\<25%) of the
+total variance.
+
+-   coefficient of Price: slightly negative, but as can be seen from the
+    plot price usually spans from 70 to 150 so change in Sales is not
+    minimal.
+-   coefficient of UrbanYES: slightly negative but the standard error
+    term is way bigger than the effect of being in a Urban area (vs
+    being not), making this predictor useless
+-   coefficient of USYES: Being in US moves the Sales 1.2 up, even if a
+    standard error of 20% is observed, compared to being in another
+    place
+
+**(c) Write out the model in equation form, being careful to handle the
+qualitative variables properly.**
+
+``` r
+Sales = (+13.043469) +
+        Price * (-0.054459) +
+        Urban * (-0.021916) + # Urban can be only 1 (UrbanYes) or 0 (UrbanNo)
+        US *    (+1.200573)   # US can be only 1 (USYes) or 0 (USNo)
+```
+
+**(d) For which of the predictors can you reject the null hypothesis H0
+: βj = 0?** For Price and US predictors
+
+**(e) On the basis of your response to the previous question, fit a
+smaller model that only uses the predictors for which there is evidence
+of association with the outcome.**
+
+``` r
+# benchmark model (all predictors)
+lm.fit.bm <- lm( Sales ~ .,
+                data = carseats)
+# summary(lm.fit.bm)
+
+# exercise (e)
+lm.fit.e <- lm( Sales ~ Price + US,
+                data = carseats)
+summary(lm.fit.e)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = Sales ~ Price + US, data = carseats)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -6.9269 -1.6286 -0.0574  1.5766  7.0515 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) 13.03079    0.63098  20.652  < 2e-16 ***
+    ## Price       -0.05448    0.00523 -10.416  < 2e-16 ***
+    ## USYes        1.19964    0.25846   4.641 4.71e-06 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 2.469 on 397 degrees of freedom
+    ## Multiple R-squared:  0.2393, Adjusted R-squared:  0.2354 
+    ## F-statistic: 62.43 on 2 and 397 DF,  p-value: < 2.2e-16
+
+**(f) How well do the models in (a) and (e) fit the data?** Basically in
+the same way, minimal differences are found in adjusted R-squared
+(amount of explained variance) and in RSE.
+
+**(g) Using the model from (e), obtain 95% confidence intervals for the
+coefficient(s)**
+
+``` r
+confint(lm.fit.e)
+```
+
+    ##                   2.5 %      97.5 %
+    ## (Intercept) 11.79032020 14.27126531
+    ## Price       -0.06475984 -0.04419543
+    ## USYes        0.69151957  1.70776632
+
+**(h) Is there evidence of outliers or high leverage observations in the
+model from (e)?**
+
+``` r
+plot(lm.fit.e)
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-21-2.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-21-3.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-21-4.png)<!-- -->
+
+Standardized errors and leverage are well withing acceptable ranges.
+
+## Quick recap
+
+``` r
+lm.fit <- lm(medv ∼ lstat , data = Boston)
+summary(lm.fit)
+
+coef(lm.fit) #instead of names(lm.fit)
+confint(lm.fit)
+
+predict(lm.fit , data.frame(lstat = (c(5, 10, 15))), interval = "prediction")
+
+attach(Boston)
+plot(lstat , medv)
+abline(lm.fit , lwd = 3, col = "red")
+
+par(mfrow = c(2, 2))
+plot(lm.fit)
+```
