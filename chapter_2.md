@@ -860,6 +860,466 @@ plot(lm.fit.e)
 
 Standardized errors and leverage are well withing acceptable ranges.
 
+### ex. 11
+
+**In this problem we will investigate the t-statistic for the null
+hypothesis H0 : β = 0 in simple linear regression without an intercept.
+To begin, we generate a predictor x and a response y as follows.**
+
+``` r
+set.seed(1)
+x <- rnorm(100)
+y <- 2 * x + rnorm(100)
+```
+
+``` r
+ggplot() + geom_point(aes(x=x, y=y))
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
+
+**(a) Perform a simple linear regression of y onto x, without an
+intercept. Report the coefficient estimate ˆβ, the standard error of
+this coefficient estimate, and the t-statistic and p-value associated
+with the null hypothesis H0 : β = 0. Comment on these results.**
+
+``` r
+lm.fit.y <- lm( y ~ x + 0)
+summary(lm.fit.y)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = y ~ x + 0)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -1.9154 -0.6472 -0.1771  0.5056  2.3109 
+    ## 
+    ## Coefficients:
+    ##   Estimate Std. Error t value Pr(>|t|)    
+    ## x   1.9939     0.1065   18.73   <2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.9586 on 99 degrees of freedom
+    ## Multiple R-squared:  0.7798, Adjusted R-squared:  0.7776 
+    ## F-statistic: 350.7 on 1 and 99 DF,  p-value: < 2.2e-16
+
+``` r
+ggplot() + 
+  geom_point(aes(x=x, y=y)) + 
+  geom_abline(slope= coef(lm.fit.y), 
+              intercept=0,
+              color = "red")
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+
+So,
+
+-   Coeff. estimate for beta: 1.9939
+-   Std. Error : 0.1065
+-   t value : 18.73
+-   P-value or Pr(>\|t\|) : \<2e-16
+
+The real beta coefficient (which is usually unknown) lies inside \< 1
+std. error of the coefficient estimate we obtained from the sampled
+data. X and y behaves like random variables, so it makes sense for the
+coefficient not to be exactly 2 (but it will continue to converge to
+that value if we sample n->Inf. times ). The process can be described by
+a t-distribution with 99 DoF, and the t-value is related to a p-value so
+low that we can reasonably discard the H0 hypothesis.
+
+**(b) Now perform a simple linear regression of x onto y without an
+intercept, and report the coefficient estimate, its standard error, and
+the corresponding t-statistic and p-values associated with the null
+hypothesis H0 : β = 0. Comment on these results.**
+
+``` r
+lm.fit.x <- lm( x ~ y + 0)
+summary(lm.fit.x)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = x ~ y + 0)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -0.8699 -0.2368  0.1030  0.2858  0.8938 
+    ## 
+    ## Coefficients:
+    ##   Estimate Std. Error t value Pr(>|t|)    
+    ## y  0.39111    0.02089   18.73   <2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.4246 on 99 degrees of freedom
+    ## Multiple R-squared:  0.7798, Adjusted R-squared:  0.7776 
+    ## F-statistic: 350.7 on 1 and 99 DF,  p-value: < 2.2e-16
+
+``` r
+ggplot() + 
+  geom_point(aes(x=y, y=x)) + 
+  geom_abline(slope= coef(lm.fit.x), 
+              intercept=0,
+              color = "red")
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+
+So,
+
+-   Coeff. estimate for beta: 0.39111
+-   Std. Error : 0.02089
+-   t value : 18.73
+-   P-value or Pr(>\|t\|) : \<2e-16
+
+Two considerations have to be made… the first one is that we know that
+the coefficient is not 0.5 but it has to take in account the effect of
+the rnorm term, which on average is 0 (as that is the mean), but not
+always. In fact, the x vector generated with the seed 1 has a mean of
+0.1, and the rnorm term used to generated the y values has a mean of
+-0.038, which explains why the beta coefficient is not 0.5.
+
+Comment for t-value and p-value does not change from previous point.
+
+**(c) What is the relationship between the results obtained in (a) and
+(b)?**
+
+If there was no rnorm term in the y equation, the linear regression of y
+onto x would be the reciprocal number of x onto y. Since the mean of
+that term is non-zero, the overall effect is to create an offset in the
+data (and 100 data points extracted from that distribution are not
+enough to reduce that effect enough to be negligible). So, the intercept
+of the linear model with the lowest possible error in non-zero, and
+trying to build a model from with a 0-intercept inevitably has a higher
+error in estimating the true beta coefficient.
+
+(d)(e)(f) need help.
+
+### ex. 12
+
+**This problem involves simple linear regression without an intercept.**
+
+**(a) Recall that the coefficient estimate ˆβ for the linear regression
+of Y onto X without an intercept is given by (3.38). Under what
+circumstance is the coefficient estimate for the regression of X onto Y
+the same as the coefficient estimate for the regression of Y onto X?**
+
+Help
+
+### ex. 13
+
+**In this exercise you will create some simulated data and will fit
+simple linear regression models to it. Make sure to use set.seed(1)
+prior to starting part (a) to ensure consistent results.**
+
+**(a) Using the rnorm() function, create a vector, x, containing 100
+observations drawn from a N(0, 1) distribution. This represents a
+feature, X.**
+
+``` r
+set.seed(1)
+x <- rnorm(n = 100)
+```
+
+**(b) Using the rnorm() function, create a vector, eps, containing 100
+observations drawn from a N(0, 0.25) distribution—a normal distribution
+with mean zero and variance 0.25**
+
+``` r
+eps <- rnorm(n = 100, sd = sqrt(0.25))
+```
+
+**(c) Using x and eps, generate a vector y according to the model Y = −1
++0.5X + ϵ.**
+
+``` r
+y <- -1 + 0.5 * x + eps
+```
+
+**What is the length of the vector y?** 100 (as x and eps, also) **What
+are the values of β0 and β1 in this linear model?** beta1 = 0.5, while
+beta0 is -1. Note that the combination of -1+mean(eps), which equals to
+-1.02 in our sample slightly changes the results in the sample, but not
+in the linear model we are describing.
+
+**(d) Create a scatterplot displaying the relationship between x and y.
+Comment on what you observe.**
+
+``` r
+ggplot() +
+  geom_point( aes( x = x, y = y))
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+
+There is an evidence of a pattern between x and y, even if confused by
+the error terms. As expected from the distribution used to generate data
+point, around x = 0, there are more points, while extreme values are
+progressively smaller.
+
+**(e) Fit a least squares linear model to predict y using x. Comment on
+the model obtained. How do βˆ0 and βˆ1 compare to β0 and β1?**
+
+``` r
+lm.fit <- lm(y ∼ x )
+summary(lm.fit)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = y ~ x)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -0.93842 -0.30688 -0.06975  0.26970  1.17309 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) -1.01885    0.04849 -21.010  < 2e-16 ***
+    ## x            0.49947    0.05386   9.273 4.58e-15 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.4814 on 98 degrees of freedom
+    ## Multiple R-squared:  0.4674, Adjusted R-squared:  0.4619 
+    ## F-statistic: 85.99 on 1 and 98 DF,  p-value: 4.583e-15
+
+They are not the same, but are within acceptable error ranges, as it is
+expected since they behave as random variables as well.
+
+**(f) Display the least squares line on the scatterplot obtained in (d).
+Draw the population regression line on the plot, in a different color.
+Use the legend() command to create an appropriate legend**
+
+``` r
+ggplot() + 
+  geom_point(aes(x = x, y = y)) + 
+  geom_abline(slope = coef(lm.fit)[2], 
+              intercept = coef(lm.fit)[1],
+              color = "red") +
+  geom_abline(slope = 0.5,
+              intercept = -1,
+              color = "blue") +
+  annotate(geom="text", 
+           x=2, y=0, 
+           label="Least Square Line",
+           color="red") +
+  annotate(geom="text", 
+           x=1.5, y=0.5, 
+           label="Population Regression line",
+           color="blue")
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
+
+**(g) Now fit a polynomial regression model that predicts y using x and
+x2. Is there evidence that the quadratic term improves the model fit?
+Explain your answer**
+
+``` r
+lm.fit.q <- lm(y ∼ x + I(x^2) )
+summary(lm.fit.q)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = y ~ x + I(x^2))
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -0.98252 -0.31270 -0.06441  0.29014  1.13500 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) -0.97164    0.05883 -16.517  < 2e-16 ***
+    ## x            0.50858    0.05399   9.420  2.4e-15 ***
+    ## I(x^2)      -0.05946    0.04238  -1.403    0.164    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.479 on 97 degrees of freedom
+    ## Multiple R-squared:  0.4779, Adjusted R-squared:  0.4672 
+    ## F-statistic:  44.4 on 2 and 97 DF,  p-value: 2.038e-14
+
+There is no indication that the quadratic term improves the fit
+(estimate is close to zero, standard error nearly as big as the the
+coefficient itself, and a p-value that can not exclude that the
+coefficient is due to random fluctuations instead of a real pattern).
+Even if R-squared is higher (even if only for a small quantity), that’s
+probably an effect we see on training data and not on the population
+itself.
+
+**(h) Repeat (a)–(f) after modifying the data generation process in such
+a way that there is less noise in the data. The model (3.39) should
+remain the same. You can do this by decreasing the variance of the
+normal distribution used to generate the error term ϵ in (b). Describe
+your results**
+
+``` r
+# x <- rnorm(n = 100)
+eps_reduced <- rnorm(n = 100, sd = 0.2)
+y_reduced <- -1 + 0.5 * x + eps_reduced
+
+lm.fit.red <- lm(y_reduced ∼ x )
+summary(lm.fit.red)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = y_reduced ~ x)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -0.58282 -0.09646 -0.00907  0.12985  0.52831 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) -0.99453    0.02094  -47.49   <2e-16 ***
+    ## x            0.50423    0.02326   21.68   <2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.2079 on 98 degrees of freedom
+    ## Multiple R-squared:  0.8275, Adjusted R-squared:  0.8257 
+    ## F-statistic:   470 on 1 and 98 DF,  p-value: < 2.2e-16
+
+``` r
+ggplot() + 
+  geom_point(aes(x = x, y = y_reduced)) +
+  geom_abline(slope = coef(lm.fit.red)[2], 
+              intercept = coef(lm.fit.red)[1],
+              color = "red") +
+  geom_abline(slope = 0.5,
+              intercept = -1,
+              color = "blue") +
+  annotate(geom="text", 
+           x=2, y=0, 
+           label="Least Square Line",
+           color="red") +
+  annotate(geom="text", 
+           x=1.5, y=0.5, 
+           label="Population Regression line",
+           color="blue")
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
+
+With reduced variance, the std error of the estimated shrinked to less
+than half, with a doubling of the t-value. The RSE of the model went
+down from 0.48 to 0.2, with an R-squared up to 83% (46% in the first
+model).
+
+**(i) Repeat (a)–(f) after modifying the data generation process in such
+a way that there is more noise in the data. The model (3.39) should
+remain the same. You can do this by increasing the variance of the
+normal distribution used to generate the error term ϵ in (b). Describe
+your results.**
+
+``` r
+# x <- rnorm(n = 100)
+eps_higher <- rnorm(n = 100, sd = 0.8)
+y_higher <- -1 + 0.5 * x + eps_higher
+
+lm.fit.high <- lm(y_higher ∼ x )
+summary(lm.fit.high)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = y_higher ~ x)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -2.01301 -0.43620 -0.03021  0.53831  1.50310 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) -0.95387    0.08023 -11.890  < 2e-16 ***
+    ## x            0.45545    0.08911   5.111 1.58e-06 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.7964 on 98 degrees of freedom
+    ## Multiple R-squared:  0.2105, Adjusted R-squared:  0.2024 
+    ## F-statistic: 26.12 on 1 and 98 DF,  p-value: 1.584e-06
+
+``` r
+ggplot() + 
+  geom_point(aes(x = x, y = y_higher)) +
+  geom_abline(slope = coef(lm.fit.high)[2], 
+              intercept = coef(lm.fit.high)[1],
+              color = "red") +
+  geom_abline(slope = 0.5,
+              intercept = -1,
+              color = "blue") +
+  annotate(geom="text", 
+           x=2, y=0, 
+           label="Least Square Line",
+           color="red") +
+  annotate(geom="text", 
+           x=1.5, y=0.5, 
+           label="Population Regression line",
+           color="blue")
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-38-1.png)<!-- -->
+
+The estimate of beta coefficients are still accurate, even if standard
+error has increased, but the R-squared of the model has decreased
+significantly to less than 25%, with an increase on the residual error
+to 0.77 (very high compared to average values of the data points).
+
+**(j) What are the confidence intervals for β0 and β1 based on the
+original data set, the noisier data set, and the less noisy data set?
+Comment on your results**
+
+``` r
+ggplot() +
+  geom_point( aes(x = x, y = y), color = "red") +
+  geom_point( aes(x = x, y = y_reduced), color = "blue") +
+  geom_point( aes(x = x, y = y_higher), , color = "green")
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-39-1.png)<!-- -->
+
+For the initial LM
+
+``` r
+confint(lm.fit)
+```
+
+    ##                  2.5 %     97.5 %
+    ## (Intercept) -1.1150804 -0.9226122
+    ## x            0.3925794  0.6063602
+
+For the model with reduced variance
+
+``` r
+confint(lm.fit.red)
+```
+
+    ##                  2.5 %     97.5 %
+    ## (Intercept) -1.0360826 -0.9529699
+    ## x            0.4580754  0.5503914
+
+For the model with increased variance
+
+``` r
+confint(lm.fit.high)
+```
+
+    ##                  2.5 %     97.5 %
+    ## (Intercept) -1.1130720 -0.7946635
+    ## x            0.2786177  0.6322846
+
+Comment on the finding: as expected, the larger the variance, the larger
+the confidence interval. Don’t know how to elaborate more (what should I
+notice?)
+
 ## Quick recap
 
 ``` r
