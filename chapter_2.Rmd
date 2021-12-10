@@ -16,6 +16,15 @@ library(ggpubr)
 library(MASS)
 library(car)
 library(dplyr)
+
+custom_function = function(data, mapping, method = "loess", ...){
+      p = ggplot(data = data, mapping = mapping) + 
+      geom_point() + 
+      geom_smooth(method=method, ...)
+      
+      p
+    }
+
 ```
 
 ### ex. 1
@@ -160,14 +169,6 @@ plot(lm.fit) #instead of plot(predict(lm.fit), residuals(lm.fit))
 
 # new method (inspired by GitHub)
 auto <- Auto
-
-custom_function = function(data, mapping, method = "loess", ...){
-      p = ggplot(data = data, mapping = mapping) + 
-      geom_point() + 
-      geom_smooth(method=method, ...)
-      
-      p
-    }
 
 auto %>% 
   dplyr::select(-name) %>%
@@ -594,6 +595,170 @@ confint(lm.fit.high)
 ```
 
 Comment on the finding: as expected, the larger the variance, the larger the confidence interval. Don't know how to elaborate more (what should I notice?)
+
+### ex. 14
+
+**This problem focuses on the collinearity problem.**
+
+**(a) Perform the following commands in R. The last line corresponds to creating a linear model in which y is a function of x1 and x2. Write out the form of the linear model. What are the regression coefficients? **
+
+```{r}
+set.seed(1)
+x1 <- runif (100) 
+x2 <- 0.5 * x1 + rnorm (100) / 10
+# ggplot() + geom_density(aes(x1)) # to visualize
+
+y <- 2 + 2 * x1 + 0.3 * x2 + rnorm (100) # 2 as beta1, 0.3 as beta2, 2 as beta0
+```
+
+**(b) What is the correlation between x1 and x2? Create a scatterplot displaying the relationship between the variables.**
+
+```{r}
+ggplot() + 
+  geom_point(aes(x1, x2)) +
+  ggtitle("x1-x2 correlation =", cor(x1, x2))
+```
+
+**(c) Using this data, fit a least squares regression to predict y using x1 and x2. Describe the results obtained. What are βˆ0, ˆβ1, and βˆ2? How do these relate to the true β0, β1, and β2? Can you reject the null hypothesis H0 : β1 = 0? How about the null hypothesis H0 : β2 = 0?**
+
+```{r}
+lm.fit.both <- lm(y ∼ x1 + x2)
+summary(lm.fit.both)
+```
+
+- estimated beta0 = 1.77, not really the real 2 but well within acceptable ranges (just outside 1 std. dev from the true value), with a good level of confidence we can reject the hypothesis that it is 0
+- estimated beta1 = 2.77, not really the real 2 but well within acceptable ranges (just outside 1 std. dev from the true value), with a good level of confidence we can reject the hypothesis that it is 0
+- estimated beta2 = 0, not really the real 0.3 and even if within acceptable error ranges, those are so big that the estimate is basically useless. Moreover, we can not be confident to refuse the hypothesis that the coefficient is non-zero
+
+**(d) Now fit a least squares regression to predict y using only x1. Comment on your results. Can you reject the null hypothesis H0 : β1 = 0?**
+
+```{r}
+lm.fit.x1 <- lm(y ∼ x1)
+summary(lm.fit.x1)
+```
+
+We can be confident to refuse the hypothesis that real beta1 is non-zero. Actually, since the amount of variance explained is the same as the lm.fit.both model, we can conclude that they performance is comparable and that x1 may suffice.
+
+**(e) Now fit a least squares regression to predict y using only x2. Comment on your results. Can you reject the null hypothesis H0 : β2 = 0?**
+
+```{r}
+lm.fit.x2 <- lm(y ∼ x2)
+summary(lm.fit.x2)
+```
+
+We can be confident to refuse the hypothesis that real beta2 is non-zero.
+
+**(f) Do the results obtained in (c)–(e) contradict each other? Explain your answer.**
+
+Linear regression relies on the absence of collinearity as one of its key assumptions. When it's violated, the statistical tests provide unreliable results. In fact, collinearity makes difficult to sort out individual effects.
+Since the accuracy on the estimates is reduced, the standard error grows (leading to a decline in the t-statistic and p-value, for instance).
+Moreover, this has a direct effect on the power of the hypothesis test, finding as non-significant potentially significant coefficients, which is precisely what happened in our case.
+
+**(g) Now suppose we obtain one additional observation, which was unfortunately mismeasured.**
+
+```{r}
+x1 <- c(x1 , 0.1)
+x2 <- c(x2 , 0.8)
+y <- c(y, 6)
+```
+
+**Re-fit the linear models from (c) to (e) using this new data. What effect does this new observation have on the each of the models? In each model, is this observation an outlier? A high-leverage point? Both? Explain your answers**
+
+```{r}
+lm.fit.new.both <- lm(y ∼ x1 + x2)
+summary(lm.fit.new.both)
+```
+
+As we can see from the summary, the coefficients are within acceptable ranges for beta0 and beta1 but way off (>2 std. dev) for x2. Moreover, we see that the estimate seems to be significant enough to reject the null hypothesis. But, as we can see from the diagnostic plots of the linear model, even if data point 101 is well within plausible data point for each vector taken alone, it's way off in the plot(x1,x2) [not shown], which result in an abnormally high leverage point, as can be seen in the 4th graph of the diagnostic series for the LM.
+
+```{r}
+plot(lm.fit.new.both)
+```
+
+
+```{r}
+lm.fit.new.x1 <- lm(y ∼ x1)
+summary(lm.fit.new.x1)
+```
+
+This model behaves well enough to be comparable to the previous one without the 101th data point, even if a decrease in R-squared of 5% is shown.
+
+```{r}
+plot(lm.fit.new.x1)
+```
+
+As can be seen from the diagnostic plots, 101 behaves as an outlier in this model (see in the graph "residuals vs fitted) but not as an high leverage point. That's why its effect on coefficient estimate is limited.
+
+```{r}
+lm.fit.new.x2 <- lm(y ∼ x2)
+summary(lm.fit.new.x2)
+```
+
+```{r}
+plot(lm.fit.new.x2)
+```
+
+The model is not significantly affected from the additional data point, giving a comparable performance (even a slightly better one) compared to the model before, probably due to the reduction of the collinearity given by the spurious data point. Not sure about this conclusion, could be only a random effect [!].
+
+### ex. 15
+
+**This problem involves the Boston data set, which we saw in the lab for this chapter. We will now try to predict per capita crime rate using the other variables in this data set. In other words, per capita crime rate is the response, and the other variables are the predictors.**
+
+**(a) For each predictor, fit a simple linear regression model to predict the response. Describe your results. In which of the models is there a statistically significant association between the predictor and the response? Create some plots to back up your assertions.**
+
+```{r}
+boston <- ISLR2::Boston
+var_names <- names(boston)
+l <- list()
+
+for(name in var_names[2:length(var_names)]) {
+  # lm.fit.temp <- lm(crim ∼ get(name), data = boston) # old version
+  lm.fit.temp <- lm( as.formula(paste("crim ∼ ", name)), 
+                     data = boston) # new
+  l[[name]] <- lm.fit.temp
+}
+
+for(lm in l) print(summary(lm))
+```
+
+Models that show a significant association between the predictor and the response variable are:
+
+- zn, proportion of residential land zoned for lots over 25,000 sq.ft.
+- indus, proportion of non-retail business acres per town
+- nox, nitrogen oxides concentration (parts per 10 million)
+- rm, average number of rooms per dwelling
+- age, proportion of owner-occupied units built prior to 1940
+- dis, weighted mean of distances to five Boston employment centres
+- rad, index of accessibility to radial highways
+- tax, full-value property-tax rate per $10,000
+- ptratio, pupil-teacher ratio by town
+- lstat, lower status of the population (percent)
+- medv, median value of owner-occupied homes in $1000s
+
+While are not showing sufficient evidence to reject the hypothesis that the beta1 coefficient is non-zero are:
+
+- chas, Charles River dummy variable (= 1 if tract bounds river; 0 otherwise)
+
+Please note that this does not mean that each variable is important  (or that they would be still significant in a multivariate linear model), but that in the case of those linear models they are sufficiently associated with the crime rate.
+
+```{r}
+boston %>% 
+  #dplyr::select(-var) %>%
+  GGally::ggpairs( lower = list(continuous = custom_function) )
+
+```
+
+**(b) Fit a multiple regression model to predict the response using all of the predictors. Describe your results. For which predictors can we reject the null hypothesis H0 : βj = 0?**
+
+```{r}
+lm.fit.all <- lm( crim ∼ ., data = boston) 
+summary(lm.fit.all)
+```
+
+A p-value of 5% does not really mean anything in this case, because there are variables for which we are strongly confident in a non-zero coefficient (dis, rad, medv) with a very small p-value, moderately confident (zn, nox, lstat) with a p-value <0.1% and non confident (the others).
+
+**(c) How do your results from (a) compare to your results from (b)? Create a plot displaying the univariate regression coefficients from (a) on the x-axis, and the multiple regression coefficients from (b) on the y-axis. That is, each predictor is displayed as a single point in the plot. Its coefficient in a simple linear regression model is shown on the x-axis, and its coefficient estimate in the multiple linear regression model is shown on the y-axis.**
+
 
 ## Quick recap
 

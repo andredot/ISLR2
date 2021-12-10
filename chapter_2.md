@@ -284,14 +284,6 @@ in the data set**
 # new method (inspired by GitHub)
 auto <- Auto
 
-custom_function = function(data, mapping, method = "loess", ...){
-      p = ggplot(data = data, mapping = mapping) + 
-      geom_point() + 
-      geom_smooth(method=method, ...)
-      
-      p
-    }
-
 auto %>% 
   dplyr::select(-name) %>%
   GGally::ggpairs( lower = list(continuous = custom_function) )
@@ -1319,6 +1311,1307 @@ confint(lm.fit.high)
 Comment on the finding: as expected, the larger the variance, the larger
 the confidence interval. Don’t know how to elaborate more (what should I
 notice?)
+
+### ex. 14
+
+**This problem focuses on the collinearity problem.**
+
+**(a) Perform the following commands in R. The last line corresponds to
+creating a linear model in which y is a function of x1 and x2. Write out
+the form of the linear model. What are the regression coefficients? **
+
+``` r
+set.seed(1)
+x1 <- runif (100) 
+x2 <- 0.5 * x1 + rnorm (100) / 10
+# ggplot() + geom_density(aes(x1)) # to visualize
+
+y <- 2 + 2 * x1 + 0.3 * x2 + rnorm (100) # 2 as beta1, 0.3 as beta2, 2 as beta0
+```
+
+**(b) What is the correlation between x1 and x2? Create a scatterplot
+displaying the relationship between the variables.**
+
+``` r
+ggplot() + 
+  geom_point(aes(x1, x2)) +
+  ggtitle("x1-x2 correlation =", cor(x1, x2))
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-44-1.png)<!-- -->
+
+**(c) Using this data, fit a least squares regression to predict y using
+x1 and x2. Describe the results obtained. What are βˆ0, ˆβ1, and βˆ2?
+How do these relate to the true β0, β1, and β2? Can you reject the null
+hypothesis H0 : β1 = 0? How about the null hypothesis H0 : β2 = 0?**
+
+``` r
+lm.fit.both <- lm(y ∼ x1 + x2)
+summary(lm.fit.both)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = y ~ x1 + x2)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -2.8311 -0.7273 -0.0537  0.6338  2.3359 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)   2.1305     0.2319   9.188 7.61e-15 ***
+    ## x1            1.4396     0.7212   1.996   0.0487 *  
+    ## x2            1.0097     1.1337   0.891   0.3754    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 1.056 on 97 degrees of freedom
+    ## Multiple R-squared:  0.2088, Adjusted R-squared:  0.1925 
+    ## F-statistic:  12.8 on 2 and 97 DF,  p-value: 1.164e-05
+
+-   estimated beta0 = 1.77, not really the real 2 but well within
+    acceptable ranges (just outside 1 std. dev from the true value),
+    with a good level of confidence we can reject the hypothesis that it
+    is 0
+-   estimated beta1 = 2.77, not really the real 2 but well within
+    acceptable ranges (just outside 1 std. dev from the true value),
+    with a good level of confidence we can reject the hypothesis that it
+    is 0
+-   estimated beta2 = 0, not really the real 0.3 and even if within
+    acceptable error ranges, those are so big that the estimate is
+    basically useless. Moreover, we can not be confident to refuse the
+    hypothesis that the coefficient is non-zero
+
+**(d) Now fit a least squares regression to predict y using only x1.
+Comment on your results. Can you reject the null hypothesis H0 : β1 =
+0?**
+
+``` r
+lm.fit.x1 <- lm(y ∼ x1)
+summary(lm.fit.x1)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = y ~ x1)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -2.89495 -0.66874 -0.07785  0.59221  2.45560 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)   2.1124     0.2307   9.155 8.27e-15 ***
+    ## x1            1.9759     0.3963   4.986 2.66e-06 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 1.055 on 98 degrees of freedom
+    ## Multiple R-squared:  0.2024, Adjusted R-squared:  0.1942 
+    ## F-statistic: 24.86 on 1 and 98 DF,  p-value: 2.661e-06
+
+We can be confident to refuse the hypothesis that real beta1 is
+non-zero. Actually, since the amount of variance explained is the same
+as the lm.fit.both model, we can conclude that they performance is
+comparable and that x1 may suffice.
+
+**(e) Now fit a least squares regression to predict y using only x2.
+Comment on your results. Can you reject the null hypothesis H0 : β2 =
+0?**
+
+``` r
+lm.fit.x2 <- lm(y ∼ x2)
+summary(lm.fit.x2)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = y ~ x2)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -2.62687 -0.75156 -0.03598  0.72383  2.44890 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)   2.3899     0.1949   12.26  < 2e-16 ***
+    ## x2            2.8996     0.6330    4.58 1.37e-05 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 1.072 on 98 degrees of freedom
+    ## Multiple R-squared:  0.1763, Adjusted R-squared:  0.1679 
+    ## F-statistic: 20.98 on 1 and 98 DF,  p-value: 1.366e-05
+
+We can be confident to refuse the hypothesis that real beta2 is
+non-zero.
+
+**(f) Do the results obtained in (c)–(e) contradict each other? Explain
+your answer.**
+
+Linear regression relies on the absence of collinearity as one of its
+key assumptions. When it’s violated, the statistical tests provide
+unreliable results. In fact, collinearity makes difficult to sort out
+individual effects. Since the accuracy on the estimates is reduced, the
+standard error grows (leading to a decline in the t-statistic and
+p-value, for instance). Moreover, this has a direct effect on the power
+of the hypothesis test, finding as non-significant potentially
+significant coefficients, which is precisely what happened in our case.
+
+**(g) Now suppose we obtain one additional observation, which was
+unfortunately mismeasured.**
+
+``` r
+x1 <- c(x1 , 0.1)
+x2 <- c(x2 , 0.8)
+y <- c(y, 6)
+```
+
+**Re-fit the linear models from (c) to (e) using this new data. What
+effect does this new observation have on the each of the models? In each
+model, is this observation an outlier? A high-leverage point? Both?
+Explain your answers**
+
+``` r
+lm.fit.new.both <- lm(y ∼ x1 + x2)
+summary(lm.fit.new.both)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = y ~ x1 + x2)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -2.73348 -0.69318 -0.05263  0.66385  2.30619 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)   2.2267     0.2314   9.624 7.91e-16 ***
+    ## x1            0.5394     0.5922   0.911  0.36458    
+    ## x2            2.5146     0.8977   2.801  0.00614 ** 
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 1.075 on 98 degrees of freedom
+    ## Multiple R-squared:  0.2188, Adjusted R-squared:  0.2029 
+    ## F-statistic: 13.72 on 2 and 98 DF,  p-value: 5.564e-06
+
+As we can see from the summary, the coefficients are within acceptable
+ranges for beta0 and beta1 but way off (>2 std. dev) for x2. Moreover,
+we see that the estimate seems to be significant enough to reject the
+null hypothesis. But, as we can see from the diagnostic plots of the
+linear model, even if data point 101 is well within plausible data point
+for each vector taken alone, it’s way off in the plot(x1,x2) \[not
+shown\], which result in an abnormally high leverage point, as can be
+seen in the 4th graph of the diagnostic series for the LM.
+
+``` r
+plot(lm.fit.new.both)
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-50-1.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-50-2.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-50-3.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-50-4.png)<!-- -->
+
+``` r
+lm.fit.new.x1 <- lm(y ∼ x1)
+summary(lm.fit.new.x1)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = y ~ x1)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -2.8897 -0.6556 -0.0909  0.5682  3.5665 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)   2.2569     0.2390   9.445 1.78e-15 ***
+    ## x1            1.7657     0.4124   4.282 4.29e-05 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 1.111 on 99 degrees of freedom
+    ## Multiple R-squared:  0.1562, Adjusted R-squared:  0.1477 
+    ## F-statistic: 18.33 on 1 and 99 DF,  p-value: 4.295e-05
+
+This model behaves well enough to be comparable to the previous one
+without the 101th data point, even if a decrease in R-squared of 5% is
+shown.
+
+``` r
+plot(lm.fit.new.x1)
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-52-1.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-52-2.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-52-3.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-52-4.png)<!-- -->
+
+As can be seen from the diagnostic plots, 101 behaves as an outlier in
+this model (see in the graph “residuals vs fitted) but not as an high
+leverage point. That’s why its effect on coefficient estimate is
+limited.
+
+``` r
+lm.fit.new.x2 <- lm(y ∼ x2)
+summary(lm.fit.new.x2)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = y ~ x2)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -2.64729 -0.71021 -0.06899  0.72699  2.38074 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)   2.3451     0.1912  12.264  < 2e-16 ***
+    ## x2            3.1190     0.6040   5.164 1.25e-06 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 1.074 on 99 degrees of freedom
+    ## Multiple R-squared:  0.2122, Adjusted R-squared:  0.2042 
+    ## F-statistic: 26.66 on 1 and 99 DF,  p-value: 1.253e-06
+
+``` r
+plot(lm.fit.new.x2)
+```
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-54-1.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-54-2.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-54-3.png)<!-- -->![](chapter_2_files/figure-gfm/unnamed-chunk-54-4.png)<!-- -->
+
+The model is not significantly affected from the additional data point,
+giving a comparable performance (even a slightly better one) compared to
+the model before, probably due to the reduction of the collinearity
+given by the spurious data point. Not sure about this conclusion, could
+be only a random effect \[!\].
+
+### ex. 15
+
+**This problem involves the Boston data set, which we saw in the lab for
+this chapter. We will now try to predict per capita crime rate using the
+other variables in this data set. In other words, per capita crime rate
+is the response, and the other variables are the predictors.**
+
+**(a) For each predictor, fit a simple linear regression model to
+predict the response. Describe your results. In which of the models is
+there a statistically significant association between the predictor and
+the response? Create some plots to back up your assertions.**
+
+``` r
+boston <- ISLR2::Boston
+var_names <- names(boston)
+l <- list()
+
+for(name in var_names[2:length(var_names)]) {
+  # lm.fit.temp <- lm(crim ∼ get(name), data = boston) # old version
+  lm.fit.temp <- lm( as.formula(paste("crim ∼ ", name)), 
+                     data = boston) # new
+  l[[name]] <- lm.fit.temp
+}
+
+for(lm in l) print(summary(lm))
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = as.formula(paste("crim ~ ", name)), data = boston)
+    ## 
+    ## Residuals:
+    ##    Min     1Q Median     3Q    Max 
+    ## -4.429 -4.222 -2.620  1.250 84.523 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  4.45369    0.41722  10.675  < 2e-16 ***
+    ## zn          -0.07393    0.01609  -4.594 5.51e-06 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 8.435 on 504 degrees of freedom
+    ## Multiple R-squared:  0.04019,    Adjusted R-squared:  0.03828 
+    ## F-statistic:  21.1 on 1 and 504 DF,  p-value: 5.506e-06
+    ## 
+    ## 
+    ## Call:
+    ## lm(formula = as.formula(paste("crim ~ ", name)), data = boston)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -11.972  -2.698  -0.736   0.712  81.813 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) -2.06374    0.66723  -3.093  0.00209 ** 
+    ## indus        0.50978    0.05102   9.991  < 2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 7.866 on 504 degrees of freedom
+    ## Multiple R-squared:  0.1653, Adjusted R-squared:  0.1637 
+    ## F-statistic: 99.82 on 1 and 504 DF,  p-value: < 2.2e-16
+    ## 
+    ## 
+    ## Call:
+    ## lm(formula = as.formula(paste("crim ~ ", name)), data = boston)
+    ## 
+    ## Residuals:
+    ##    Min     1Q Median     3Q    Max 
+    ## -3.738 -3.661 -3.435  0.018 85.232 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)   3.7444     0.3961   9.453   <2e-16 ***
+    ## chas         -1.8928     1.5061  -1.257    0.209    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 8.597 on 504 degrees of freedom
+    ## Multiple R-squared:  0.003124,   Adjusted R-squared:  0.001146 
+    ## F-statistic: 1.579 on 1 and 504 DF,  p-value: 0.2094
+    ## 
+    ## 
+    ## Call:
+    ## lm(formula = as.formula(paste("crim ~ ", name)), data = boston)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -12.371  -2.738  -0.974   0.559  81.728 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  -13.720      1.699  -8.073 5.08e-15 ***
+    ## nox           31.249      2.999  10.419  < 2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 7.81 on 504 degrees of freedom
+    ## Multiple R-squared:  0.1772, Adjusted R-squared:  0.1756 
+    ## F-statistic: 108.6 on 1 and 504 DF,  p-value: < 2.2e-16
+    ## 
+    ## 
+    ## Call:
+    ## lm(formula = as.formula(paste("crim ~ ", name)), data = boston)
+    ## 
+    ## Residuals:
+    ##    Min     1Q Median     3Q    Max 
+    ## -6.604 -3.952 -2.654  0.989 87.197 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)   20.482      3.365   6.088 2.27e-09 ***
+    ## rm            -2.684      0.532  -5.045 6.35e-07 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 8.401 on 504 degrees of freedom
+    ## Multiple R-squared:  0.04807,    Adjusted R-squared:  0.04618 
+    ## F-statistic: 25.45 on 1 and 504 DF,  p-value: 6.347e-07
+    ## 
+    ## 
+    ## Call:
+    ## lm(formula = as.formula(paste("crim ~ ", name)), data = boston)
+    ## 
+    ## Residuals:
+    ##    Min     1Q Median     3Q    Max 
+    ## -6.789 -4.257 -1.230  1.527 82.849 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) -3.77791    0.94398  -4.002 7.22e-05 ***
+    ## age          0.10779    0.01274   8.463 2.85e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 8.057 on 504 degrees of freedom
+    ## Multiple R-squared:  0.1244, Adjusted R-squared:  0.1227 
+    ## F-statistic: 71.62 on 1 and 504 DF,  p-value: 2.855e-16
+    ## 
+    ## 
+    ## Call:
+    ## lm(formula = as.formula(paste("crim ~ ", name)), data = boston)
+    ## 
+    ## Residuals:
+    ##    Min     1Q Median     3Q    Max 
+    ## -6.708 -4.134 -1.527  1.516 81.674 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)   9.4993     0.7304  13.006   <2e-16 ***
+    ## dis          -1.5509     0.1683  -9.213   <2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 7.965 on 504 degrees of freedom
+    ## Multiple R-squared:  0.1441, Adjusted R-squared:  0.1425 
+    ## F-statistic: 84.89 on 1 and 504 DF,  p-value: < 2.2e-16
+    ## 
+    ## 
+    ## Call:
+    ## lm(formula = as.formula(paste("crim ~ ", name)), data = boston)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -10.164  -1.381  -0.141   0.660  76.433 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) -2.28716    0.44348  -5.157 3.61e-07 ***
+    ## rad          0.61791    0.03433  17.998  < 2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 6.718 on 504 degrees of freedom
+    ## Multiple R-squared:  0.3913, Adjusted R-squared:   0.39 
+    ## F-statistic: 323.9 on 1 and 504 DF,  p-value: < 2.2e-16
+    ## 
+    ## 
+    ## Call:
+    ## lm(formula = as.formula(paste("crim ~ ", name)), data = boston)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -12.513  -2.738  -0.194   1.065  77.696 
+    ## 
+    ## Coefficients:
+    ##              Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) -8.528369   0.815809  -10.45   <2e-16 ***
+    ## tax          0.029742   0.001847   16.10   <2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 6.997 on 504 degrees of freedom
+    ## Multiple R-squared:  0.3396, Adjusted R-squared:  0.3383 
+    ## F-statistic: 259.2 on 1 and 504 DF,  p-value: < 2.2e-16
+    ## 
+    ## 
+    ## Call:
+    ## lm(formula = as.formula(paste("crim ~ ", name)), data = boston)
+    ## 
+    ## Residuals:
+    ##    Min     1Q Median     3Q    Max 
+    ## -7.654 -3.985 -1.912  1.825 83.353 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) -17.6469     3.1473  -5.607 3.40e-08 ***
+    ## ptratio       1.1520     0.1694   6.801 2.94e-11 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 8.24 on 504 degrees of freedom
+    ## Multiple R-squared:  0.08407,    Adjusted R-squared:  0.08225 
+    ## F-statistic: 46.26 on 1 and 504 DF,  p-value: 2.943e-11
+    ## 
+    ## 
+    ## Call:
+    ## lm(formula = as.formula(paste("crim ~ ", name)), data = boston)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -13.925  -2.822  -0.664   1.079  82.862 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) -3.33054    0.69376  -4.801 2.09e-06 ***
+    ## lstat        0.54880    0.04776  11.491  < 2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 7.664 on 504 degrees of freedom
+    ## Multiple R-squared:  0.2076, Adjusted R-squared:  0.206 
+    ## F-statistic:   132 on 1 and 504 DF,  p-value: < 2.2e-16
+    ## 
+    ## 
+    ## Call:
+    ## lm(formula = as.formula(paste("crim ~ ", name)), data = boston)
+    ## 
+    ## Residuals:
+    ##    Min     1Q Median     3Q    Max 
+    ## -9.071 -4.022 -2.343  1.298 80.957 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) 11.79654    0.93419   12.63   <2e-16 ***
+    ## medv        -0.36316    0.03839   -9.46   <2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 7.934 on 504 degrees of freedom
+    ## Multiple R-squared:  0.1508, Adjusted R-squared:  0.1491 
+    ## F-statistic: 89.49 on 1 and 504 DF,  p-value: < 2.2e-16
+
+Models that show a significant association between the predictor and the
+response variable are:
+
+-   zn, proportion of residential land zoned for lots over 25,000 sq.ft.
+-   indus, proportion of non-retail business acres per town
+-   nox, nitrogen oxides concentration (parts per 10 million)
+-   rm, average number of rooms per dwelling
+-   age, proportion of owner-occupied units built prior to 1940
+-   dis, weighted mean of distances to five Boston employment centres
+-   rad, index of accessibility to radial highways
+-   tax, full-value property-tax rate per $10,000
+-   ptratio, pupil-teacher ratio by town
+-   lstat, lower status of the population (percent)
+-   medv, median value of owner-occupied homes in $1000s
+
+While are not showing sufficient evidence to reject the hypothesis that
+the beta1 coefficient is non-zero are:
+
+-   chas, Charles River dummy variable (= 1 if tract bounds river; 0
+    otherwise)
+
+Please note that this does not mean that each variable is important (or
+that they would be still significant in a multivariate linear model),
+but that in the case of those linear models they are sufficiently
+associated with the crime rate.
+
+``` r
+boston %>% 
+  #dplyr::select(-var) %>%
+  GGally::ggpairs( lower = list(continuous = custom_function) )
+```
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.5
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 13
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 2.9038e-031
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 156.25
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at
+    ## -0.5
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 13
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 2.9038e-031
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : There are other near
+    ## singularities as well. 156.25
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.5
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 13
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 2.9038e-031
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 156.25
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at
+    ## -0.5
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 13
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 2.9038e-031
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : There are other near
+    ## singularities as well. 156.25
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.5
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 13
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 2.9038e-031
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 156.25
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at
+    ## -0.5
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 13
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 2.9038e-031
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : There are other near
+    ## singularities as well. 156.25
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : radius 2.5e-005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : all data on boundary of neighborhood. make span bigger
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 1
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 1.01
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : zero-width neighborhood. make span bigger
+
+    ## Warning: Computation failed in `stat_smooth()`:
+    ## NA/NaN/Inf in chiamata a funzione esterna (arg 5)
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.5
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 13
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 2.9038e-031
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 156.25
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at
+    ## -0.5
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 13
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 2.9038e-031
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : There are other near
+    ## singularities as well. 156.25
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : radius 2.5e-005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : all data on boundary of neighborhood. make span bigger
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 1
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 1.01
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : zero-width neighborhood. make span bigger
+
+    ## Warning: Computation failed in `stat_smooth()`:
+    ## NA/NaN/Inf in chiamata a funzione esterna (arg 5)
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.5
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 13
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 2.9038e-031
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 156.25
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at
+    ## -0.5
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 13
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 2.9038e-031
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : There are other near
+    ## singularities as well. 156.25
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : radius 2.5e-005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : all data on boundary of neighborhood. make span bigger
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 1
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 1.01
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : zero-width neighborhood. make span bigger
+
+    ## Warning: Computation failed in `stat_smooth()`:
+    ## NA/NaN/Inf in chiamata a funzione esterna (arg 5)
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.5
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 13
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 2.9038e-031
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 156.25
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at
+    ## -0.5
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 13
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 2.9038e-031
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : There are other near
+    ## singularities as well. 156.25
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : radius 2.5e-005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : all data on boundary of neighborhood. make span bigger
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 1
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 1.01
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : zero-width neighborhood. make span bigger
+
+    ## Warning: Computation failed in `stat_smooth()`:
+    ## NA/NaN/Inf in chiamata a funzione esterna (arg 5)
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.5
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 13
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 2.9038e-031
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 156.25
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at
+    ## -0.5
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 13
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 2.9038e-031
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : There are other near
+    ## singularities as well. 156.25
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : radius 2.5e-005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : all data on boundary of neighborhood. make span bigger
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 1
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 1.01
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : zero-width neighborhood. make span bigger
+
+    ## Warning: Computation failed in `stat_smooth()`:
+    ## NA/NaN/Inf in chiamata a funzione esterna (arg 5)
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.5
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 13
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 2.9038e-031
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 156.25
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at
+    ## -0.5
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 13
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 2.9038e-031
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : There are other near
+    ## singularities as well. 156.25
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : radius 2.5e-005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : all data on boundary of neighborhood. make span bigger
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 1
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 1.01
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : zero-width neighborhood. make span bigger
+
+    ## Warning: Computation failed in `stat_smooth()`:
+    ## NA/NaN/Inf in chiamata a funzione esterna (arg 5)
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.5
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 13
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 2.9038e-031
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 156.25
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at
+    ## -0.5
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 13
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 2.9038e-031
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : There are other near
+    ## singularities as well. 156.25
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : radius 2.5e-005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : all data on boundary of neighborhood. make span bigger
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 1
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 1.01
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : zero-width neighborhood. make span bigger
+
+    ## Warning: Computation failed in `stat_smooth()`:
+    ## NA/NaN/Inf in chiamata a funzione esterna (arg 5)
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.5
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 13
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 2.9038e-031
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 156.25
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at
+    ## -0.5
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 13
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 2.9038e-031
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : There are other near
+    ## singularities as well. 156.25
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : radius 2.5e-005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : all data on boundary of neighborhood. make span bigger
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 1
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 1.01
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : zero-width neighborhood. make span bigger
+
+    ## Warning: Computation failed in `stat_smooth()`:
+    ## NA/NaN/Inf in chiamata a funzione esterna (arg 5)
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.5
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 13
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 2.9038e-031
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 156.25
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : pseudoinverse used at
+    ## -0.5
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : neighborhood radius 13
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : reciprocal condition
+    ## number 2.9038e-031
+
+    ## Warning in predLoess(object$y, object$x, newx = if
+    ## (is.null(newdata)) object$x else if (is.data.frame(newdata))
+    ## as.matrix(model.frame(delete.response(terms(object)), : There are other near
+    ## singularities as well. 156.25
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : radius 2.5e-005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : all data on boundary of neighborhood. make span bigger
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : pseudoinverse used at -0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : neighborhood radius 0.005
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : reciprocal condition number 1
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : There are other near singularities as well. 1.01
+
+    ## Warning in simpleLoess(y, x, w, span, degree = degree, parametric =
+    ## parametric, : zero-width neighborhood. make span bigger
+
+    ## Warning: Computation failed in `stat_smooth()`:
+    ## NA/NaN/Inf in chiamata a funzione esterna (arg 5)
+
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+    ## `geom_smooth()` using formula 'y ~ x'
+
+![](chapter_2_files/figure-gfm/unnamed-chunk-56-1.png)<!-- -->
+
+**(b) Fit a multiple regression model to predict the response using all
+of the predictors. Describe your results. For which predictors can we
+reject the null hypothesis H0 : βj = 0?**
+
+``` r
+lm.fit.all <- lm( crim ∼ ., data = boston) 
+summary(lm.fit.all)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = crim ~ ., data = boston)
+    ## 
+    ## Residuals:
+    ##    Min     1Q Median     3Q    Max 
+    ## -8.534 -2.248 -0.348  1.087 73.923 
+    ## 
+    ## Coefficients:
+    ##               Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) 13.7783938  7.0818258   1.946 0.052271 .  
+    ## zn           0.0457100  0.0187903   2.433 0.015344 *  
+    ## indus       -0.0583501  0.0836351  -0.698 0.485709    
+    ## chas        -0.8253776  1.1833963  -0.697 0.485841    
+    ## nox         -9.9575865  5.2898242  -1.882 0.060370 .  
+    ## rm           0.6289107  0.6070924   1.036 0.300738    
+    ## age         -0.0008483  0.0179482  -0.047 0.962323    
+    ## dis         -1.0122467  0.2824676  -3.584 0.000373 ***
+    ## rad          0.6124653  0.0875358   6.997 8.59e-12 ***
+    ## tax         -0.0037756  0.0051723  -0.730 0.465757    
+    ## ptratio     -0.3040728  0.1863598  -1.632 0.103393    
+    ## lstat        0.1388006  0.0757213   1.833 0.067398 .  
+    ## medv        -0.2200564  0.0598240  -3.678 0.000261 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 6.46 on 493 degrees of freedom
+    ## Multiple R-squared:  0.4493, Adjusted R-squared:  0.4359 
+    ## F-statistic: 33.52 on 12 and 493 DF,  p-value: < 2.2e-16
+
+A p-value of 5% does not really mean anything in this case, because
+there are variables for which we are strongly confident in a non-zero
+coefficient (dis, rad, medv) with a very small p-value, moderately
+confident (zn, nox, lstat) with a p-value \<0.1% and non confident (the
+others).
+
+**(c) How do your results from (a) compare to your results from (b)?
+Create a plot displaying the univariate regression coefficients from (a)
+on the x-axis, and the multiple regression coefficients from (b) on the
+y-axis. That is, each predictor is displayed as a single point in the
+plot. Its coefficient in a simple linear regression model is shown on
+the x-axis, and its coefficient estimate in the multiple linear
+regression model is shown on the y-axis.**
 
 ## Quick recap
 
