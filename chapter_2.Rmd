@@ -104,7 +104,7 @@ salary_college = BETA + beta3*x3 + beta5*x1*x3
 
 ### ex. 5
 
-Help
+**Consider the fitted values that result from performing linear regression without an intercept**
 
 ### ex. 6
 
@@ -759,24 +759,70 @@ A p-value of 5% does not really mean anything in this case, because there are va
 
 **(c) How do your results from (a) compare to your results from (b)? Create a plot displaying the univariate regression coefficients from (a) on the x-axis, and the multiple regression coefficients from (b) on the y-axis. That is, each predictor is displayed as a single point in the plot. Its coefficient in a simple linear regression model is shown on the x-axis, and its coefficient estimate in the multiple linear regression model is shown on the y-axis.**
 
+```{r}
+lm_coef <- data.frame(row.names = names(boston)[2:length(names(boston))])
 
-## Quick recap
+for(var in row.names(lm_coef)) {
+  # l[[var]]$coefficients[[2]] # check if it works
+  lm_coef[var,"univariate"] <- l[[var]]$coefficients[[2]]
+  # maybe implement also error in the future
+  
+  # lm.fit.all$coefficients[[var]] # check if it works
+  lm_coef[var, "multiple"] <- lm.fit.all$coefficients[[var]]
+}
+
+
+ggplot(lm_coef,
+       aes( x = univariate,
+            y = multiple,
+            color = rownames(lm_coef),
+            label = rownames(lm_coef))) +
+  geom_point( size = 3) +
+  geom_abline( color = "red") +
+  geom_text(nudge_y = 0.2,
+            check_overlap = TRUE)+
+  coord_fixed() +
+  coord_cartesian( xlim = c(-3, 1.5), ylim = c(-2, 2))
+```
+
+Note than point "nox" is not displayed on the chart since its coordinates are (-9.9; 31).
+
+Most points lies in close proximity to the line which represent equivalence between the two coordinates [not sure if coefficients are to be presented with a cartesian scale (or if it's better another one)].
+
+**(d) Is there evidence of non-linear association between any of the predictors and the response? To answer this question, for each predictor X, fit a model of the form
+Y = β0 + β1X + β2X^2 + β3X^3 + ϵ**
+
+```{r}
+l_exp <- list()
+
+for(name in var_names[2:length(var_names)]) {
+  lm.fit.temp <- lm( as.formula(paste("crim ∼ ", 
+                                      name, 
+                                      " + I(",
+                                      name,
+                                      "^2) + I(",
+                                      name,
+                                      "^3)" )
+                                ), 
+                     data = boston) # new
+  l_exp[[name]] <- lm.fit.temp
+}
+
+for(lm in l_exp) print(summary(lm))
+
+```
+
+Yes, for most of the predictors (as seen from the summary) there is sufficient evidence to reject the hypothesis that there is no relationships beyond the linear one.
+
+
+## Quick functions
 
 ```{r, eval = FALSE}
-
 lm.fit <- lm(medv ∼ lstat , data = Boston)
 summary(lm.fit)
-
 coef(lm.fit) #instead of names(lm.fit)
 confint(lm.fit)
-
 predict(lm.fit , data.frame(lstat = (c(5, 10, 15))), interval = "prediction")
-
-attach(Boston)
-plot(lstat , medv)
-abline(lm.fit , lwd = 3, col = "red")
-
-par(mfrow = c(2, 2))
 plot(lm.fit)
 ```
 
