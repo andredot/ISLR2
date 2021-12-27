@@ -97,3 +97,34 @@ exp <- prob_a / (1 - prob_a) # = 1
 ( x1 <- - (beta0 + beta2*x2) / beta1 )
 ```
 
+### ex. 7
+
+**Suppose that we wish to predict whether a given stock will issue a dividend this year (“Yes” or “No”) based on X, last year’s percent profit. We examine a large number of companies and discover that the mean value of X for companies that issued a dividend was X¯ = 10, while the mean for those that didn’t was X¯ = 0. In addition, the variance of X for these two sets of companies was ˆσ2 = 36. Finally, 80% of companies issued dividends. Assuming that X follows a normal distribution, predict the probability that a company will issue a dividend this year given that its percentage profit was X = 4 last year**
+
+Since there are only two possible outcomes, we are proceeding to calculate the value of the density function for both of them
+
+```{r}
+mu_yes <- 10
+mu_no <- 0
+x <- 4
+var <- 36
+prior_yes <- 0.8
+prior_no <- 1 - prior_yes
+
+# dividend YES
+first_term_yes <- 1 / sqrt(2 * prior_yes * var)
+exp_yes <- exp( -1 * (x-mu_yes)^2 / (2 * var) )
+f_x_yes <- first_term_yes * exp_yes
+
+# dividend NO
+first_term_no <- 1 / sqrt(2 * prior_no * var)
+exp_no <- exp( -1 * (x-mu_no)^2 / (2 * var) )
+f_x_no <- first_term_no * exp_no
+
+# posterior probability
+( f_x_yes / (f_x_yes + f_x_no) )
+```
+
+### ex. 8
+
+**Suppose that we take a data set, divide it into equally-sized training and test sets, and then try out two different classification procedures.First we use logistic regression and get an error rate of 20% on the training data and 30% on the test data. Next we use 1-nearest neighbors (i.e. K = 1) and get an average error rate (averaged over both test and training data sets) of 18 %. Based on these results, which method should we prefer to use for classification of new observations? Why?** The LR method shows a modest quantity of overfitting and a greater error on the test set, KNN-1 should be preferred on new obs.
