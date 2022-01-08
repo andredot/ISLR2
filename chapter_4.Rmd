@@ -13,9 +13,11 @@ When you execute code within the notebook, the results appear beneath the code.
 library(tidyverse)
 library(ISLR2)
 library(ggpubr)
-library(MASS)
-library(car)
-library(dplyr)
+library(MASS) #lda, qda
+library(e1071) #naive_bayes
+library(class) #knn
+library(GGally)
+library(precrec) # ROC curve
 ```
 
 ### ex. 1
@@ -128,3 +130,544 @@ f_x_no <- first_term_no * exp_no
 ### ex. 8
 
 **Suppose that we take a data set, divide it into equally-sized training and test sets, and then try out two different classification procedures.First we use logistic regression and get an error rate of 20% on the training data and 30% on the test data. Next we use 1-nearest neighbors (i.e. K = 1) and get an average error rate (averaged over both test and training data sets) of 18 %. Based on these results, which method should we prefer to use for classification of new observations? Why?** The LR method shows a modest quantity of overfitting and a greater error on the test set, KNN-1 should be preferred on new obs.
+
+### ex. 9
+
+**On average, what fraction of people with an odds of 0.37 of defaulting on their credit card payment will in fact default?**
+
+```{r}
+odds <- 0.37
+(rr <- odds/(1+odds) )
+```
+
+**Suppose that an individual has a 16% chance of defaulting on her credit card payment. What are the odds that she will default?**
+
+```{r}
+rr <- 0.15
+( odds <- rr/(1-rr) )
+```
+
+### ex. 10
+
+### ex. 11
+
+### ex. 12
+
+**Suppose that you wish to classify an observation X ∈ R into apples and oranges. You fit a logistic regression model and find that**
+
+
+Pr(Y = orange|X = x) = exp(ˆβ0 + ˆβ1x) / [ 1 + exp(ˆβ0 + ˆβ1x) ]
+
+**Your friend fits a logistic regression model to the same data using the softmax formulation in (4.13), and finds that**
+
+Pr(Y = orange|X = x) = exp(ˆα orange0 +ˆα orange1x) / [ exp(ˆα orange0 +ˆα orange1x) + exp(ˆα apple0 +ˆα apple1x) ]
+
+**(a) What is the log odds of orange versus apple in your model?** ˆβ0 + ˆβ1x
+
+**(b) What is the log odds of orange versus apple in your friend’s model?** ˆα (ˆα orange0 -ˆα apple0) + (ˆα orange1 -ˆα apple1)x
+
+**(c) Suppose that in your model, βˆ0 = 2 and βˆ1 = −1. What are the coefficient estimates in your friend’s model? Be as specific as possible.** Since (a) and (b) should be the same, (ˆα orange0 -ˆα apple0) = 2 and (ˆα orange1 -ˆα apple1) = -1
+
+**(d) Now suppose that you and your friend fit the same two models on a different data set. This time, your friend gets the coefficient estimates ˆαorange0 =1.2, ˆαorange1 = −2, ˆαapple0 = 3, ˆαapple1 = 0.6. What are the coefficient estimates in your model?**
+
+```{r, eval = FALSE}
+beta0 <- 1.2 - 3
+beta1 <- -2 - 0.6
+```
+
+**(e) Finally, suppose you apply both models from (d) to a data set with 2,000 test observations. What fraction of the time do you expect the predicted class labels from your model to agree with those from your friend’s model? Explain your answer.** Even if coefficients are different, predictions should be the same between max-likelihood and softmax.
+
+### ex. 13
+
+**This question should be answered using the Weekly data set, which is part of the ISLR2 package. This data is similar in nature to the Smarket data from this chapter’s lab, except that it contains 1, 089 weekly returns for 21 years, from the beginning of 1990 to the end of 2010.**
+
+```{r}
+weekly <- ISLR2::Weekly
+```
+
+**(a) Produce some numerical and graphical summaries of the Weekly data. Do there appear to be any patterns?**
+
+```{r}
+cor(weekly[, -which(names(weekly) == "Direction")])
+```
+
+```{r}
+
+custom_function = function(data, mapping, method = "loess", ...){
+      p = ggplot(data = data, mapping = mapping) + 
+      geom_point() + 
+      geom_smooth(method=method, ...)
+      
+      p
+    }
+
+weekly %>% 
+  GGally::ggpairs( lower = list(continuous = custom_function) )
+```
+
+No strong correlations can be seen between data (volume vs today shows that the value of stock has increased in the observed period).
+
+**Use the full data set to perform a logistic regression with Direction as the response and the five lag variables plus Volume as predictors. Use the summary function to print the results. Do any of the predictors appear to be statistically significant? If so, which ones?**
+
+```{r}
+lr.fit <- glm(Direction ∼ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume,
+              data = weekly,
+              family = "binomial")
+summary(lr.fit)
+```
+
+Lag2 has a p-value < 0.5, the only one under that level.
+
+**Compute the confusion matrix and overall fraction of correct predictions. Explain what the confusion matrix is telling you about the types of mistakes made by logistic regression.**
+
+```{r}
+lr_probs <- predict(lr.fit, type = "response")
+
+lr_pred <- rep(times = dim(weekly)[1], x = "Down")
+lr_pred[lr_probs > 0.5] <- "Up"
+
+table(lr_pred, weekly[["Direction"]])
+```
+
+```{r}
+mean(lr_pred == weekly[["Direction"]])
+```
+
+The error is similar for both the classes: once a class is predicted, we can be only slightly more than 50% sure that this is the real one, and we are still talking about evaluating the model on the same dataset it was trained on.
+
+**Now fit the logistic regression model using a training data period from 1990 to 2008, with Lag2 as the only predictor. Compute the confusion matrix and the overall fraction of correct predictions for the held out data (that is, the data from 2009 and 2010).**
+
+```{r}
+train <- weekly[["Year"]] <= 2008
+test <- weekly[!train, ]
+direction <- weekly[["Direction"]][!train]
+
+lr.fit <- glm(Direction ∼ Lag2,
+              data = weekly,
+              family = "binomial",
+              subset = train)
+
+lr_probs <- predict(lr.fit, 
+                    type = "response",
+                    newdata = test)
+
+quick_eval <- function(l_probs, test_true) {
+  lr_pred <- rep(times = length(l_probs), x = "Down")
+  lr_pred[l_probs > 0.5] <- "Up"
+  
+  return( list( conf_mat = table(lr_pred, test_true), 
+               accuracy = mean(lr_pred == test_true))
+  )
+}
+
+quick_eval(lr_probs, direction)
+```
+
+(e) Repeat (d) using LDA. 
+
+```{r}
+lda.fit <- lda(Direction ∼ Lag2,
+               data = weekly,
+               subset = train)
+
+lda_probs <- predict(lda.fit, 
+                    type = "response",
+                    newdata = test)
+
+quick_eval(lda_probs[["posterior"]][,"Up"], direction)
+```
+
+(f) Repeat (d) using QDA. 
+
+```{r}
+qda.fit <- qda(Direction ∼ Lag2,
+               data = weekly,
+               subset = train)
+
+qda_probs <- predict(qda.fit, 
+                    type = "response",
+                    newdata = test)
+
+quick_eval(qda_probs[["posterior"]][,"Up"], direction)
+```
+
+(g) Repeat (d) using KNN with K = 1. 
+
+```{r}
+set.seed(1)
+k_preds <- knn( train = as.matrix(weekly[train, "Lag2"]),
+                test =  as.matrix(weekly[!train, "Lag2"]),
+                cl = weekly[train, "Direction"],
+                k = 1 )
+
+(list( conf_mat = table(k_preds, direction), 
+       accuracy = mean(k_preds == direction)) )
+```
+
+(h) Repeat (d) using naive Bayes.
+
+```{r}
+nb.fit <- naiveBayes(Direction ∼ Lag2,
+               data = weekly,
+               subset = train)
+
+nb_probs <- predict(nb.fit,
+                    type = "raw",
+                    newdata = test)
+
+quick_eval(nb_probs[,"Up"], direction)
+
+```
+
+**(i) Which of these methods appears to provide the best results on this data?** LDA with a treshold of 0.5
+
+**(j)** skip
+
+### ex. 14
+
+**In this problem, you will develop a model to predict whether a given car gets high or low gas mileage based on the Auto data set.**
+
+```{r}
+auto <- Auto
+```
+
+**(a) Create a binary variable, mpg01, that contains a 1 if mpg contains a value above its median, and a 0 if mpg contains a value below its median. You can compute the median using the median() function. Note you may find it helpful to use the data.frame() function to create a single data set containing both mpg01 and the other Auto variables**
+
+```{r}
+auto <- auto %>%
+  mutate( mpg01 = mpg > median(mpg) ) %>% 
+  dplyr::select(-mpg)
+```
+
+**(b) Explore the data graphically in order to investigate the association between mpg01 and the other features. Which of the other features seem most likely to be useful in predicting mpg01? Scatterplots and boxplots may be useful tools to answer this question. Describe your findings.**
+
+```{r}
+ggplot(data = auto,
+       aes( fill = mpg01) ) +
+  geom_histogram(aes( x = cylinders),
+                 position = "fill" )
+```
+
+```{r}
+ggplot(data = auto,
+       aes( fill = mpg01) ) +
+  geom_density(aes( x = displacement),
+               alpha = 0.5 )
+```
+
+```{r}
+ggplot(data = auto,
+       aes( fill = mpg01) ) +
+  geom_histogram(aes( x = horsepower),
+               position = "dodge")
+```
+
+```{r}
+ggplot(data = auto,
+       aes( fill = mpg01) ) +
+  geom_histogram(aes( x = weight),
+               position = "dodge")
+
+```
+
+```{r}
+
+ggplot(data = auto,
+       aes( fill = mpg01) ) +
+  geom_density(aes( x = acceleration),
+               alpha = 0.5,
+               position = "fill") +
+  geom_hline( yintercept = 0.5,
+              linetype = "dotdash" )
+
+```
+
+```{r}
+
+ggplot(data = auto,
+       aes( fill = mpg01) ) +
+  geom_density(aes( x = year),
+               alpha = 0.5,
+               position = "fill") +
+  geom_hline( yintercept = 0.5,
+              linetype = "dotdash" )
+```
+
+```{r}
+
+ggplot(data = auto,
+       aes( fill = mpg01) ) +
+  geom_histogram(aes( x = origin),
+               # alpha = 0.5,
+               position = "fill")
+```
+
+cylinders, displacement, horsepower, weight and origin seem to have a stronger relationship with mpg01
+
+**(c) Split the data into a training set and a test set.**
+
+```{r}
+train <- auto %>%
+  slice_sample(prop = 0.75) 
+  
+test <- auto %>% 
+  anti_join(train)
+  
+```
+
+**(d) Perform LDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?**
+
+```{r}
+lda.fit <- lda( mpg01 ~ cylinders + displacement + horsepower + 
+                  weight + origin,
+                data = train)
+
+lda_probs <- predict(lda.fit, 
+                    type = "response",
+                    newdata = test)
+
+table(lda_probs[["class"]],test[["mpg01"]])
+1 - mean(lda_probs[["class"]] == test[["mpg01"]])
+```
+
+**(e) Perform QDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?**
+
+```{r}
+qda.fit <- qda( mpg01 ~ cylinders + displacement + horsepower + 
+                  weight + origin,
+                data = train)
+
+qda_probs <- predict(qda.fit, 
+                    type = "response",
+                    newdata = test)
+
+table(qda_probs[["class"]],test[["mpg01"]])
+1 - mean(qda_probs[["class"]] == test[["mpg01"]])
+```
+
+
+**(f) Perform logistic regression on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?**
+
+```{r}
+lr.fit <- glm( mpg01 ~ cylinders + displacement + horsepower + 
+                  weight + origin,
+               family = "binomial",
+               data = train)
+
+lr_probs <- predict(lr.fit, 
+                    type = "response",
+                    newdata = test)
+
+table(lr_probs > 0.5, test[["mpg01"]])
+1 - mean((lr_probs > 0.5) == test[["mpg01"]])
+
+```
+
+**(g) Perform naive Bayes on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?**
+
+```{r}
+nb.fit <- naiveBayes( mpg01 ~ cylinders + displacement + horsepower + 
+                  weight + origin,
+               data = train)
+
+nb_probs <- predict(nb.fit, 
+                    type = "class",
+                    newdata = test)
+
+table(nb_probs,test[["mpg01"]])
+1 - mean(nb_probs == test[["mpg01"]])
+
+```
+
+**(h) Perform KNN on the training data, with several values of K, in order to predict mpg01. Use only the variables that seemed most associated with mpg01 in (b). What test errors do you obtain? Which value of K seems to perform the best on this data set?** Used every variable (no "name"), test errors are lower at k = 4 and k = 20, even if the differences are minimal
+
+```{r}
+k_list <- c(1:15, 2:8 *10)
+err_list <- vector(mode = "double", length = 0)
+
+for(k in k_list) {
+  knn_preds <- knn( train = train %>% dplyr::select(-mpg01,-name),
+                  test = test %>% dplyr::select(-mpg01,-name),
+                  cl = train[["mpg01"]],
+                  k = k )
+
+  # table(knn_preds,test[["mpg01"]])
+  err_list <- c(err_list, 
+                1 - mean(knn_preds == test[["mpg01"]]) )
+}
+
+k_err_list <- bind_cols(k_list, err_list)
+colnames(k_err_list) <- c("k", "error")
+
+ggplot(k_err_list) +
+  geom_line( aes( x = k,
+                   y = error)) +
+  scale_x_log10()
+
+```
+
+### ex. 15
+
+**This problem involves writing functions**
+
+**(a) Write a function, Power(), that prints out the result of raising 2 to the 3rd power. In other words, your function should compute 23 and print out the results.**
+
+```{r}
+Power <- function() {
+  ( x <- 2^3 )
+}
+```
+
+**(b) Create a new function, Power2(), that allows you to pass any two numbers, x and a, and prints out the value of x^a.**
+
+```{r}
+Power2 <- function(x, a) {
+  ( x^a )
+}
+```
+
+**(c) Using the Power2() function that you just wrote, compute 10^3, 8^17, and 131^3**
+
+```{r}
+c(Power2(10,3), Power2(8,17), Power2(131,3) )
+```
+
+**(d) Now create a new function, Power3(), that actually returns the result x^a as an R object, rather than simply printing it to the screen. **
+
+```{r}
+Power3 <- function(x, a) {
+  return( x^a )
+}
+```
+
+**(e) Now using the Power3() function, create a plot of f(x)= x^2. The x-axis should display a range of integers from 1 to 10, and the y-axis should display x2. Label the axes appropriately, and use an appropriate title for the figure. Consider displaying either the x-axis, the y-axis, or both on the log-scale.**
+
+```{r}
+ggplot() +
+  geom_point( aes( x = 1:10,
+                   y = Power3(..x.., 2)) ) +
+  labs(title = "f(x) = x^2",
+       x = "x", y = "y") +
+  scale_y_log10()
+```
+
+**(f) Create a function, PlotPower(), that allows you to create a plot of x against x^a for a fixed a and for a range of values of x**
+
+```{r}
+PlotPower <- function(x, a) {
+  #implicit return of the ggplot object
+  ggplot() +
+  geom_point( aes( x = x,
+                   y = Power3(..x.., a)) ) +
+  labs(title = "f(x) = x^2",
+       x = "x", y = "y")
+}
+```
+
+### ex. 16
+
+**16. Using the Boston data set, fit classification models in order to predict whether a given census tract has a crime rate above or below the median. Explore logistic regression, LDA, naive Bayes, and KNN models using various subsets of the predictors. Describe your findings.**
+
+```{r}
+boston <- Boston
+
+boston <- boston %>%
+  mutate( crim01 = crim > median(crim) ) %>% 
+  dplyr::select(-crim)
+
+
+boston %>%
+  gather(-crim01, key = "var", value = "value") %>% 
+  ggplot(aes(x = value, 
+             fill = crim01) ) +
+    geom_histogram( position = "fill") + #or geom_density
+    geom_rug() +
+    geom_hline( yintercept = 0.5,
+                linetype = "dotdash" ) +
+    facet_wrap(~ var, scales = "free")
+```
+
+```{r}
+model_create_eval <- function(f, data) {
+  train <- data %>%
+    slice_sample(prop = 0.8) 
+  test <- data %>% 
+    anti_join(train)
+  
+  lr_fit <- glm(f,
+                data = train,
+                family = "binomial")
+  
+  lda_fit <- lda(f,
+                 data = train)
+  
+  qda_fit <- qda(f,
+                 data = train)
+  
+  nb_fit <- naiveBayes(f,
+                       data = train)
+  
+  #knn
+  
+  lr_probs <- predict(lr_fit, 
+                      type = "response",
+                      newdata = test)
+  
+  lda_probs <- predict(lda_fit, 
+                      type = "response",
+                      newdata = test)[["posterior"]][,"TRUE"]
+  
+  qda_probs <- predict(qda_fit, 
+                      type = "response",
+                      newdata = test)[["posterior"]][,"TRUE"]
+  
+  nb_probs <- predict(nb_fit,
+                      type = "raw",
+                      newdata = test)[,"TRUE"]
+  
+  probs_list <- list( lr = lr_probs,
+                      lda = lda_probs,
+                      qda = qda_probs,
+                      nb = nb_probs)
+  
+  #roc plot
+  precrec_obj <- evalmod(scores = probs_list, 
+                         modnames = names(probs_list),
+                         labels = test[["crim01"]])
+  a <- autoplot(precrec_obj,
+           curvetype = "ROC")
+  ggarrange( a, diag_plots(probs_list, results = test[["crim01"]]),
+             ncol = 2 )
+}
+
+# diagnostic single plot
+d_plot <- function(d_probs, results, treshold = 0.5, ...) {
+  ggplot() +
+    geom_density(aes( x = d_probs,
+                    fill = results),
+               alpha = 0.5, ...) +
+    geom_vline( xintercept = treshold,
+                linetype = "dotdash" ) +
+    scale_fill_discrete(name = "Crime level")
+}
+
+# diagnostic plots (all together)
+diag_plots <- function(probs_list, results, x = 0.5) {
+  
+  ggarrange(d_plot(probs_list[["lr"]], results, x),  
+              d_plot(probs_list[["lr"]], results, x, position = "fill"),
+            d_plot(probs_list[["lda"]], results, x), 
+              d_plot(probs_list[["lda"]], results, x, position = "fill"),
+            d_plot(probs_list[["qda"]], results, x), 
+              d_plot(probs_list[["qda"]], results, x, position = "fill"),
+            d_plot(probs_list[["nb"]], results, x),  
+              d_plot(probs_list[["nb"]], results, x, position = "fill"),
+            ncol=2, nrow=4)
+}
+```
+
+```{r}
+f <- as.formula( crim01 ~ black + tax + nox)
+model_create_eval(f, boston)
+```
+
