@@ -340,8 +340,8 @@ lasso_mod <- glmnet(x, y,
 #crossvalidated choice of lambda
 
 set.seed(123)
-train <- sample(x = 1:nrow(x), 
-                size = nrow(x)/2)
+train <- sample(x = 1:dim(x)[1], 
+                size = dim(x)[1]/2)
 test <- (-train) 
 y_test <- y[test]
 
@@ -349,19 +349,33 @@ cv_out <- cv.glmnet( x[train , ],
                      y[train], 
                      alpha = 1)
 ( best_lambda <- cv_out[["lambda.min"]] )
+```
 
-########
-#
-# Plot of Error vs lambda missing
-#
-#######
+    ## [1] 0.008677741
 
+``` r
+ggplot() +
+  geom_pointrange( aes( x = cv_out[["lambda"]],
+                        y = cv_out[["cvm"]],
+                        ymin = cv_out[["cvlo"]],
+                        ymax = cv_out[["cvup"]] )) +
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-20-1.png)
+
+``` r
 # MSE associated with best_lambda
 lasso_pred <- predict(lasso_mod , 
                       s = best_lambda , 
                       newx = x[test , ])
 mean((lasso_pred - y_test)^2)
+```
 
+    ## [1] 0.951781
+
+``` r
 # Coef
 lasso_coef <- predict(lasso_mod , 
                       type = "coefficients", 
@@ -369,6 +383,513 @@ lasso_coef <- predict(lasso_mod ,
 lasso_coef[1:11,]
 ```
 
-Best lambda is 0.08, so not very high, but sufficient to shrunk to zero most of the coefficients apart from beta1 and beta3.
+    ##   (Intercept)            X1            X2            X3            X4 
+    ##  1.502332e+00  9.130216e-01 -1.145606e-01  8.235765e-01  0.000000e+00 
+    ##            X5            X6            X7            X8            X9 
+    ##  0.000000e+00  0.000000e+00  0.000000e+00  6.487255e-04  0.000000e+00 
+    ##           X10 
+    ##  8.417303e-05
+
+Best lambda is 0.008, so not very high, but sufficient to shrunk to zero most of the coefficients apart from beta1 and beta3.
 
 **(f) Now generate a response vector Y according to the model Y = β0 + β7X7 + ϵ, and perform best subset selection and the lasso. Discuss the results obtained.**
+
+``` r
+beta7 <- 1.5
+set.seed(123)
+x <- rnorm( n = 100)
+y2 <- beta0 + beta7*x^7 + e
+d <- d %>% mutate( y = y2)
+
+ggplot(d) + geom_point( aes( x = x,
+                             y = y))
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-22-1.png)
+
+``` r
+regfit_full <- regsubsets(y ∼ ., 
+                          data = d,
+                          nvmax = 9)
+regfit_full_sum <- summary(regfit_full)
+plot_reg(regfit_full_sum)
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-23-1.png)
+
+``` r
+coef(regfit_full, 1)
+```
+
+    ## (Intercept)          X7 
+    ##    1.393251    1.499704
+
+``` r
+x <- model.matrix(y ∼ ., d)[, -1] # y is already in y
+grid <- 10^seq(from = 10, to = -2, length = 100) 
+lasso_mod <- glmnet(x, y2, 
+                    alpha = 1, 
+                    lambda = grid)
+#crossvalidated choice of lambda
+
+set.seed(123)
+train <- sample(x = 1:dim(x)[1], 
+                size = dim(x)[1]/2)
+test <- (-train) 
+y_test <- y2[test]
+
+cv_out <- cv.glmnet( x[train , ], 
+                     y2[train], 
+                     alpha = 1)
+( best_lambda <- cv_out[["lambda.min"]] )
+```
+
+    ## [1] 2.721207
+
+``` r
+ggplot() +
+  geom_pointrange( aes( x = cv_out[["lambda"]],
+                        y = cv_out[["cvm"]],
+                        ymin = cv_out[["cvlo"]],
+                        ymax = cv_out[["cvup"]] )) +
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-25-1.png)
+
+``` r
+# MSE associated with best_lambda
+lasso_pred <- predict(lasso_mod , 
+                      s = best_lambda , 
+                      newx = x[test , ])
+mean((lasso_pred - y_test)^2)
+```
+
+    ## [1] 4.714608
+
+``` r
+# Coef
+lasso_coef <- predict(lasso_mod , 
+                      type = "coefficients", 
+                      s=best_lambda)
+lasso_coef[1:11,]
+```
+
+    ## (Intercept)          X1          X2          X3          X4          X5 
+    ##    1.533337    0.000000    0.000000    0.000000    0.000000    0.000000 
+    ##          X6          X7          X8          X9         X10 
+    ##    0.000000    1.447825    0.000000    0.000000    0.000000
+
+The best subset selection gave a bizarre result, failing to identify the correct variable, while the lasso shrunk to zero all coefficients apart from the correct beta.
+
+### ex. 9
+
+**In this exercise, we will predict the number of applications received using the other variables in the College data set.**
+
+**(a) Split the data set into a training set and a test set. (b) Fit a linear model using least squares on the training set, and report the test error obtained.**
+
+``` r
+set.seed(123)
+
+college <- College
+train <- sample( x = 1:dim(college)[1], 
+                 size = 0.8*dim(college)[1])
+test <- (-train) 
+y_test <- college[test, "Apps"]
+
+lm_fit <- lm( Apps ~ .,
+              data = college,
+              subset = train)
+# summary(lm_fit)
+y_pred <- predict(lm_fit,
+                  interval = "prediction",
+                  newdata = college[test,])
+
+errors <- c(lm = mean((y_test - y_pred)^2))
+errors["lm"]
+```
+
+    ##      lm 
+    ## 4610377
+
+**(c) Fit a ridge regression model on the training set, with λ chosen by cross-validation. Report the test error obtained.**
+
+``` r
+x <- model.matrix(Apps ∼ .,
+                  data = college)[, -1]
+grid <- 10^seq(from = 10, to = -2, length = 100) 
+ridge_mod <- glmnet(x[train,], 
+                    college[train, "Apps"], 
+                    alpha = 0, 
+                    lambda = grid)
+
+#crossvalidated choice of lambda
+
+cv_out <- cv.glmnet( x[train, ], 
+                     college[train, "Apps"], 
+                     alpha = 0)
+( best_lambda <- cv_out[["lambda.min"]] )
+```
+
+    ## [1] 313.5603
+
+``` r
+ggplot() +
+  geom_pointrange( aes( x = cv_out[["lambda"]],
+                        y = cv_out[["cvm"]],
+                        ymin = cv_out[["cvlo"]],
+                        ymax = cv_out[["cvup"]] )) +
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-28-1.png)
+
+``` r
+# MSE associated with best_lambda
+ridge_pred <- predict(ridge_mod , 
+                      s = best_lambda , 
+                      newx = x[test, ])
+( errors["ridge"] <- mean((ridge_pred - y_test)^2) )
+```
+
+    ## [1] 3938403
+
+``` r
+# Coef
+ridge_coef <- predict(ridge_mod , 
+                      type = "coefficients", 
+                      s=best_lambda)
+ggplot() +
+  geom_point( aes(y = ridge_coef@x,
+                 x = ridge_coef@Dimnames[[1]])) +
+  coord_flip(ylim = c(-2,+2)) +
+  ggtitle( "Ridge MSE = ", mean((ridge_pred - y_test)^2) )
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-29-1.png)
+
+**(d) Fit a lasso model on the training set, with λ chosen by crossvalidation. Report the test error obtained, along with the number of non-zero coefficient estimates.**
+
+``` r
+lasso_mod <- glmnet(x[train,], 
+                    college[train, "Apps"], 
+                    alpha = 1, 
+                    lambda = grid)
+
+#crossvalidated choice of lambda
+
+cv_out <- cv.glmnet( x[train, ], 
+                     college[train, "Apps"], 
+                     alpha = 1)
+( best_lambda <- cv_out[["lambda.min"]] )
+```
+
+    ## [1] 11.80534
+
+``` r
+ggplot() +
+  geom_pointrange( aes( x = cv_out[["lambda"]],
+                        y = cv_out[["cvm"]],
+                        ymin = cv_out[["cvlo"]],
+                        ymax = cv_out[["cvup"]] )) +
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-30-1.png)
+
+``` r
+# MSE associated with best_lambda
+lasso_pred <- predict(lasso_mod , 
+                      s = best_lambda , 
+                      newx = x[test, ])
+( errors["lasso"] <- mean((lasso_pred - y_test)^2) )
+```
+
+    ## [1] 2232155
+
+``` r
+# Coef
+(lasso_coef <- predict(lasso_mod , 
+                      type = "coefficients", 
+                      s=best_lambda) )
+```
+
+    ## 18 x 1 sparse Matrix of class "dgCMatrix"
+    ##                        s1
+    ## (Intercept) -5.635101e+02
+    ## PrivateYes  -5.694126e+02
+    ## Accept       1.214179e+00
+    ## Enroll       .           
+    ## Top10perc    3.670011e+01
+    ## Top25perc   -7.221290e+00
+    ## F.Undergrad  6.029745e-02
+    ## P.Undergrad  .           
+    ## Outstate    -4.000401e-02
+    ## Room.Board   1.480473e-01
+    ## Books        1.038872e-03
+    ## Personal     .           
+    ## PhD         -4.496929e+00
+    ## Terminal    -4.574465e+00
+    ## S.F.Ratio    .           
+    ## perc.alumni -6.747747e+00
+    ## Expend       7.542227e-02
+    ## Grad.Rate    8.775119e+00
+
+``` r
+ggplot() +
+  geom_point( aes(y = lasso_coef@x,
+                  x = lasso_coef@i)) +
+  coord_flip() +
+  ggtitle( "Lasso MSE = ", mean((lasso_pred - y_test)^2) )
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-31-1.png)
+
+**(e) Fit a PCR model on the training set, with M chosen by crossvalidation. Report the test error obtained, along with the value of M selected by cross-validation.**
+
+``` r
+pcr_fit <- pcr(Apps ~ .,
+               data = college,
+               subset = train,
+               scale = TRUE,
+               validation = "CV")
+#summary(pcr_fit)
+validationplot(pcr_fit , val.type = "MSEP")
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-32-1.png)
+
+From the plot, 4 components seem to capture most of the information in the dataset
+
+``` r
+pcr_pred <- predict(pcr_fit , x[test , ], ncomp = 4) 
+( errors["PCAr"] <- mean((pcr_pred - y_test)^2) )
+```
+
+    ## [1] 5760389
+
+**(f) Fit a PLS model on the training set, with M chosen by crossvalidation. Report the test error obtained, along with the value of M selected by cross-validation.**
+
+``` r
+pls_fit <- plsr(Apps ~ .,
+               data = college,
+               subset = train,
+               scale = TRUE,
+               validation = "CV")
+#summary(pls_fit)
+validationplot(pls_fit , val.type = "MSEP")
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-34-1.png)
+
+After 5 components, it does not seem to be any significant improvement
+
+``` r
+pls_pred <- predict(pcr_fit , x[test , ], ncomp = 5) 
+( errors["PLSr"] <- mean((pls_pred - y_test)^2) )
+```
+
+    ## [1] 5791529
+
+**(g) Comment on the results obtained. How accurately can we predict the number of college applications received? Is there much difference among the test errors resulting from these five approaches?**
+
+``` r
+ggplot() +
+  geom_col( aes(x = names(errors),
+                y = errors)) +
+  coord_flip()
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-36-1.png)
+
+``` r
+ggplot() +
+  geom_density( aes(x = lasso_pred - y_test)) +
+  geom_vline(xintercept = 0)
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-37-1.png)
+
+As we can see, most of the prediction are within 1000 for most of the test dataset. The lasso has a substantial advantage over the the other methods, as we can see from the linear model approach.
+
+### ex. 10
+
+**We have seen that as the number of features used in a model increases, the training error will necessarily decrease, but the test error may not. We will now explore this in a simulated data set.**
+
+**(a) Generate a data set with p = 20 features, n =1,000 observations, and an associated quantitative response vector generated according to the model Y = Xβ + ϵ, where β has some elements that are exactly equal to zero.**
+
+``` r
+set.seed(123)
+p <- 20
+n <- 1000
+beta <- runif(p, min = -4, max = 4)
+beta[5:12] <- 0
+
+data <- data.frame( matrix( data = rnorm(p*n, sd = 4),
+                            nrow = 1000,
+                            ncol = p) )
+
+e <- rnorm(1000, sd = 2)
+y <- rep(0, times = n)
+for( i in 1:n) y[i] <- sum(data[i,] * beta) + e[i]
+
+data["y"] <- y
+```
+
+**(b) Split your data set into a training set containing 100 observations and a test set containing 900 observations.**
+
+``` r
+train <- sample(x = n, size = 100)
+test <- (1:n)[-train]
+```
+
+**(c) Perform best subset selection on the training set, and plot the training set MSE associated with the best model of each size.**
+
+``` r
+regfit_full <- regsubsets(y ∼ ., 
+                          data = data[train,],
+                          nvmax = 20)
+regfit_full_sum <- summary(regfit_full)
+
+train_mat <- model.matrix(y ∼ ., data = data[train, ])
+
+val_errors_train <- rep(NA, p)
+for (i in 1:p) { 
+  coefi <- coef(regfit_full , id = i)
+  pred <- train_mat[, names(coefi)] %*% coefi
+  val_errors_train[i] <- mean((data[train, "y"] - pred)^2) 
+}
+
+ggplot() +
+  geom_line( aes( x = 1:p,
+                  y = val_errors_train))
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-40-1.png)
+
+**(d) Plot the test set MSE associated with the best model of each size.**
+
+``` r
+test_mat <- model.matrix(y ∼ ., data = data[test, ])
+
+val_errors_test <- rep(NA, p)
+for (i in 1:p) { 
+  coefi <- coef(regfit_full , id = i)
+  pred <- test_mat[, names(coefi)] %*% coefi
+  val_errors_test[i] <- mean((data[test, "y"] - pred)^2) 
+  }
+
+ggplot() +
+  geom_line( aes( x = 1:p,
+                  y = val_errors_test)) +
+  scale_y_log10()
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-41-1.png)
+
+**(e) For which model size does the test set MSE take on its minimum value?**
+
+``` r
+which.min(val_errors_test)
+```
+
+    ## [1] 12
+
+**Comment on your results. If it takes on its minimum value for a model containing only an intercept or a model containing all of the features, then play around with the way that you are generating the data in (a) until you come up with a scenario in which the test set MSE is minimized for an intermediate model size.** Since the 8 variable with a beta coefficient set to 0 are noise, the model with 12 variables was expected to be the one with the lowest test MSE, whichis slightly increased with &gt;12 variable models.
+
+**(f) How does the model at which the test set MSE is minimized compare to the true model used to generate the data? Comment on the coefficient values.**
+
+``` r
+coef(regfit_full,12)
+```
+
+    ## (Intercept)          X1          X2          X3          X4         X13 
+    ##  -0.2828308  -1.6689506   2.3304298  -0.8542322   3.0362714   1.4888301 
+    ##         X14         X15         X16         X17         X18         X19 
+    ##   0.5567702  -3.1288740   3.2763534  -1.9658116  -3.6292481  -1.3683916 
+    ##         X20 
+    ##   3.7802492
+
+``` r
+beta[ beta != 0]
+```
+
+    ##  [1] -1.6993798  2.3064411 -0.7281846  3.0641392  1.4205651  0.5810672
+    ##  [7] -3.1766025  3.1985998 -2.0312981 -3.6635237 -1.3766342  3.6360292
+
+``` r
+ggplot() +
+  geom_point( aes(x = names(coef(regfit_full,12)),
+                  y = coef(regfit_full,12)),
+              alpha = 0.8) +
+  geom_point(aes(x = 2:13,
+                 y = beta[ beta != 0]),
+             colour = "blue") +
+  coord_flip()
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-43-1.png)
+
+As we can see, some of the beta coefficients are near each other (X14), while some others are really far away. For sure, all the coefficients that should be zero are zero even in the regfit model. Probably all this distance in the estimates is because of the very small training set (10%) which prevent the models from reaching a higher accuracy in prediction.
+
+\*\*(g) Create a plot displaying of r,where \[formula on p.287\] for a range of values j is the jth coefficient estimate for the best model containing r coefficients. Comment on what you observe. How does this compare to the test MSE plot from (d)?
+
+``` r
+beta_pred <- data.frame( matrix(0, nrow = p, ncol = p))
+
+for (i in 1:p) { 
+  coefi <- coef(regfit_full , id = i)[-1]
+  for(j in names(coefi)) {
+    beta_pred[i, j] <- coefi[[j]]
+  }}
+
+beta_true <- data.frame( matrix( rep(beta, times = p), 
+                                 nrow = p,
+                                 byrow = TRUE))
+
+tbse <- rep(NA, times = p) # total betas squadred error
+for (i in 1:p) { 
+  for( j in names(beta_pred)) {
+    beta_pred[i, j] <- (beta_true[i, j] - beta_pred[i, j])^2
+  }
+  tbse[i] <- sum( beta_pred[i,] )
+  }
+
+### Do not use - different formula
+### When bij does not exist, it leaves the difference to 0
+###
+# tbse <- rep(NA, times = p) # total betas squadred error
+# for (i in 1:p) { 
+#   for( j in names(beta_pred)) {
+#     if( beta_pred[i, j] != 0 ) 
+#       beta_pred[i, j] <- (beta_true[i, j] - beta_pred[i, j])^2
+#   }
+#   tbse[i] <- sum( beta_pred[i,] )
+#   }
+###
+
+tbse_plot <- ggplot() +
+  geom_line( aes( x = 1:p,
+                  y = sqrt(tbse)))+
+  geom_vline( xintercept = which.min(tbse),
+              linetype = "dotted")
+mse_plot <- ggplot() +
+  geom_line( aes( x = 1:p,
+                  y = val_errors_test),
+             color = "blue") +
+  geom_vline( xintercept = which.min(val_errors_test),
+              linetype = "dotted") +
+  scale_y_log10()
+ggarrange(tbse_plot, mse_plot, nrow = 2)
+```
+
+![](chapter_6_files/figure-markdown_github/unnamed-chunk-44-1.png)
+
+The curves show a similar behaviour, with a minimum in the same point. I expected the total beta squared difference to have a minimum point at the best model point, since it shows the difference between the real and predicted coefficients.
+
+### ex. 11
+
+\*\*
