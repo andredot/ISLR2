@@ -1,6 +1,7 @@
 ---
 title: "ISLR Ch.6"
 output: github_document
+always_allow_html: true
 editor_options: 
   markdown: 
     wrap: sentence
@@ -17,6 +18,7 @@ library(GGally)
 library(pls) # PLS and PCA
 library(glmnet)# ridge and lasso
 library(leaps) #subset
+library(plotly) # 3d scatterplot
 ```
 
 ### ex. 1
@@ -777,5 +779,242 @@ The curves show a similar behaviour, with a minimum in the same point. I expecte
 
 ### ex. 11
 
-**
+**We will now try to predict per capita crime rate in the Boston data set.**
 
+```{r}
+boston <- Boston
+p <- ncol(boston) - 1 # number of predictors
+set.seed(123)
+
+# train test split
+train <- sample( x = 1:dim(boston)[1], 
+                 size = 0.8*dim(boston)[1])
+test <- (-train) 
+y_test <- boston[test, "crim"]
+
+lm_fit <- lm( crim ~ .,
+              data = boston,
+              subset = train)
+lm_coef <- coef(lm_fit)
+# summary(lm_fit)
+lm_pred <- predict(lm_fit,
+                   interval = "prediction",
+                   newdata = boston[test,])
+
+errors <- c(lm = mean((y_test - lm_pred[,"fit"])^2))
+errors["lm"]
+
+```
+
+**(a) Try out some of the regression methods explored in this chapter, such as best subset selection, the lasso, ridge regression, and PCR. Present and discuss results for the approaches that you consider.**
+
+Let's begin with a best subset selection
+
+```{r}
+regfit_full <- regsubsets(crim ∼ ., 
+                          data = boston[train,],
+                          nvmax = p)
+regfit_full_sum <- summary(regfit_full)
+
+test_mat <- model.matrix(crim ∼ ., data = boston[test, ])
+
+val_errors_test <- rep(NA, p)
+for (i in 1:p) { 
+  coefi <- coef(regfit_full , id = i)
+  pred <- test_mat[, names(coefi)] %*% coefi
+  val_errors_test[i] <- mean((y_test - pred)^2) 
+  }
+
+ggplot() +
+  geom_line( aes( x = 1:p,
+                  y = val_errors_test)) +
+  geom_vline( xintercept = 7,
+              linetype = "dotted")
+```
+
+As we can see, the model with 7 predictors, even if not the best (actual minimum is the 11-variable model) is definitely comparable. The variable that are part of the model are...
+
+```{r}
+# aim: set to 0 the predictor that are not present in bss
+bss7_coef <- rep(0, p+1) # a p+1 vector of 0...
+names(bss7_coef) <- colnames(test_mat) # with predictor names
+coefs <- coef(regfit_full, 7)
+bss7_coef[names(coefs)] <- coefs
+
+bss11_coef <- rep(0, p+1) # a p+1 vector of 0...
+names(bss11_coef) <- colnames(test_mat) # with predictor names
+coefs <- coef(regfit_full, 11)
+bss11_coef[names(coefs)] <- coefs
+```
+
+Since we have already run our model on the test set, let's extract them and their MSE.
+
+```{r}
+errors["BSS_7"] <- val_errors_test[7]
+errors["BSS_11"] <- val_errors_test[11]
+```
+
+The lm_fit corresponds to the BSS_12 model, so it won't be included.
+
+Let's proceed with a lasso model selection, with a crossvalidation to select best lambda.
+
+```{r}
+# unvalidated model
+train_mat <- model.matrix(crim ∼ ., boston)[, -1]
+lasso_mod <- glmnet(x = train_mat[train,], 
+                    y = boston[train,"crim"], 
+                    alpha = 1)
+
+#crossvalidated choice of lambda
+
+set.seed(123)
+cv_out <- cv.glmnet(x = train_mat[train,], 
+                    y = boston[train,"crim"], 
+                    alpha = 1)
+( best_lambda <- cv_out[["lambda.min"]] )
+
+ggplot() +
+  geom_pointrange( aes( x = cv_out[["lambda"]],
+                        y = cv_out[["cvm"]],
+                        ymin = cv_out[["cvlo"]],
+                        ymax = cv_out[["cvup"]] )) +
+  scale_x_log10()
+```
+
+Now that we have our best lambda, we proceed to obtain the MSE
+
+```{r}
+# MSE associated with best_lambda
+lasso_pred <- predict(lasso_mod , 
+                      s = best_lambda , 
+                      newx = test_mat[,-1])
+( errors["lasso"] <- mean((lasso_pred - y_test)^2) )
+
+# Coef
+(lasso_coef <- predict(lasso_mod , 
+                      type = "coefficients", 
+                      s= best_lambda) )
+
+```
+
+As we can see, some of the coefficients are zero, as it is expected in the lasso.
+
+But now move onto the ridge regression, which instead of bringing some of the coefs to zero, shrink nearly all of them of a similar amount.
+
+```{r}
+ridge_mod <- glmnet(x = train_mat[train,], 
+                    y = boston[train,"crim"], 
+                    alpha = 0)
+
+#crossvalidated choice of lambda
+
+cv_out <- cv.glmnet(x = train_mat[train,], 
+                    y = boston[train,"crim"], 
+                    alpha = 0)
+( best_lambda <- cv_out[["lambda.min"]] )
+
+ggplot() +
+  geom_pointrange( aes( x = cv_out[["lambda"]],
+                        y = cv_out[["cvm"]],
+                        ymin = cv_out[["cvlo"]],
+                        ymax = cv_out[["cvup"]] )) +
+  scale_x_log10()
+```
+
+```{r}
+# MSE associated with best_lambda
+ridge_pred <- predict(ridge_mod , 
+                      s = best_lambda , 
+                      newx = test_mat[,-1])
+( errors["ridge"] <- mean((ridge_pred - y_test)^2) )
+
+# Coef
+(ridge_coef <- predict(ridge_mod , 
+                      type = "coefficients", 
+                      s= best_lambda) )
+```
+
+Finally, a PCA regression is tried to see if there is any good principal component that captures data variability.
+
+```{r}
+pcr_fit <- pcr(crim ~ .,
+               data = boston,
+               subset = train,
+               scale = TRUE,
+               validation = "CV")
+#summary(pcr_fit)
+validationplot(pcr_fit , val.type = "MSEP")
+
+pcr_pred_3 <- predict(pcr_fit , test_mat[,-1], ncomp = 3) 
+( errors["PCAr_3"] <- mean((pcr_pred_3 - y_test)^2) )
+
+```
+
+No clear point can be identified, since MSEP gradually decreases. Both PCA_3comp will be collected.
+
+Please note that the 3-component PCA can be also used to print the test dataset "all at once"
+
+```{r}
+pcr_fit <- pcr(crim ~ .,
+               data = boston,
+               subset = test,
+               scale = TRUE,
+               ncomp = 3)
+
+plot_ly(x = pcr_fit$scores[,1], 
+        y = pcr_fit$scores[,2], 
+        z = pcr_fit$scores[,3], 
+        type = "scatter3d", 
+        mode = "markers",
+        color = log(y_test))
+```
+
+But now that all the different approaches have been tried and evaluated on the test set, it is time to compare them through their MSE
+
+```{r}
+ggplot() +
+  geom_col( aes( fill = names(errors),
+                 x = names(errors),
+                 y = errors)) +
+  coord_flip()
+```
+
+And then watching how was the distribution of their errors
+
+```{r}
+ggplot(alpha = 0.5) +
+  geom_density( aes(x = lasso_pred-y_test),
+                fill = "blue", alpha = 0.5) +
+  geom_density( aes(x = ridge_pred-y_test),
+                fill = "green", alpha = 0.5) +
+  geom_density( aes(x = lm_pred-y_test),
+                fill = "red", alpha = 0.5) +
+  geom_density( aes(x = pcr_pred_3-y_test),
+                fill = "orange", alpha = 0.5) +
+  geom_vline( xintercept = 0,
+              linetype = "dotted")
+```
+
+And the value of the coefficients (PCA has not, so it is not shown)
+
+```{r}
+ggplot() +
+  geom_point( aes( x = colnames(test_mat),
+                   y = lm_coef),
+              color = "red", alpha = 0.5) +
+  geom_point( aes( x = colnames(test_mat),
+                 y = bss7_coef),
+            color = "purple", alpha = 0.5) +
+  geom_point( aes( x = colnames(test_mat),
+                 y = bss11_coef),
+            color = "violet", alpha = 0.5) +
+  # geom_point( aes( x = colnames(test_mat),
+  #                y = lasso_coef),
+  #           color = "blue", alpha = 0.5) +
+  # geom_point( aes( x = colnames(test_mat),
+  #                y = ridge_coef),
+  #           color = "green", alpha = 0.5) +
+  coord_flip()
+```
+
+**(c) Does your chosen model involve all of the features in the data set? Why or why not?** Lasso_model has not all the features, so it's easier to explain it and understand coefficients.
