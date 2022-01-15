@@ -1,0 +1,144 @@
+---
+title: "ISLR Ch.7"
+output: github_document
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook.
+When you execute code within the notebook, the results appear beneath the code.
+
+```{r, include = FALSE}
+library(tidyverse)
+library(ISLR2)
+library(ggpubr)
+library(GGally)
+library(pls) # PLS and PCA
+library(glmnet)# ridge and lasso
+library(leaps) #subset
+library(boot) # cv glm
+```
+
+### ex. 1
+
+
+### ex. 2
+
+
+### ex. 3
+
+
+### ex. 4
+
+
+### ex. 5
+
+**Consider two curves, ˆg1 and ˆg2, defined by [equation on p.323]. where g(m) represents the mth derivative of g.**
+
+**(a) As λ →∞, will ˆg1 or ˆg2 have the smaller training RSS?** g1, because since it has less costraints on the shape of the fitting line, it an provide a better fit on training data
+
+**(b) As λ →∞, will ˆg1 or ˆg2 have the smaller test RSS?** Unsure, it really depends on the data. In a setting where more flexibility is required, g1 will probably behave better.
+
+**(c) For λ = 0, will ˆg1 or ˆg2 have the smaller training and test RSS?** They will have exactly the same training and test error since the formula simplifies to the MSE for linear regression.
+
+### ex. 6
+
+**In this exercise, you will further analyze the Wage data set considered throughout this chapter.**
+
+**(a) Perform polynomial regression to predict wage using age. Use cross-validation to select the optimal degree d for the polynomial. What degree was chosen, and how does this compare to the results of hypothesis testing using ANOVA? Make a plot of the resulting polynomial fit to the data.**
+
+```{r}
+set.seed(123)
+wage <- Wage
+cv_error <- rep(NA, 5)
+
+for (i in 1:5) { 
+  lm_fit <- glm(wage ∼ poly(age , i),
+                data = wage)
+  cv_error[i] <- cv.glm(wage , lm_fit , K = 10)$delta[1]
+}
+cv_error
+ggplot() +
+  geom_line( aes( x = 1:5,
+                  y = cv_error))
+```
+
+```{r}
+fit_1 <- lm(wage ∼ age , data = wage)
+fit_2 <- lm(wage ∼ poly(age , 2), data = wage)
+fit_3 <- lm(wage ∼ poly(age , 3), data = wage)
+fit_4 <- lm(wage ∼ poly(age , 4), data = wage)
+fit_5 <- lm(wage ∼ poly(age , 5), data = wage)
+
+(anova_fit <- anova(fit_1, fit_2, fit_3, fit_4, fit_5) )
+```
+
+As we can see from the CV, little improvement can be seen after the 3rd degree polinomial, and ANOVA shows the same thing, suggesting no better model in the 4th compared to the 3rd.
+
+```{r}
+wage %>%
+  select(wage, age) %>% 
+  mutate( wage_pred_3 = predict(fit_3)) %>% 
+  ggplot() +
+    geom_jitter( aes( x = age,
+                     y = wage),
+                alpha = 0.2) +
+    geom_line( aes( x = age,
+                    y = wage_pred_3),
+               color = "red")
+```
+
+**(b) Fit a step function to predict wage using age, and perform crossvalidation to choose the optimal number of cuts. Make a plot of the fit obtained.**
+
+```{r}
+n <- 20
+cut_error <- rep(NA, n)
+
+for (i in 2:n) { 
+  lm_fit <- glm(wage ∼ cut(age , i, labels = FALSE),
+                data = wage)
+  cut_error[i] <- cv.glm(wage , lm_fit , K = 10)$delta[1]
+}
+
+#cut_error
+ggplot() +
+  geom_line( aes( x = 1:n,
+                  y = cut_error)) +
+  coord_cartesian( ylim  = c(1500,max(cut_error)))
+```
+
+Any break more than 9 does not seem to have any significant improvement, so it can be chosen to plot
+
+```{r}
+breaks <- 9
+lm_fit <- lm( wage ∼ cut(age , breaks),
+                data = wage)
+summary(lm_fit)
+
+## one way to extract the breakpoints
+labs <- levels(cut(wage[,"age"],breaks))
+levels <- cbind(lower = as.numeric( sub("\\((.+),.*", "\\1", labs) ),
+                upper = as.numeric( sub("[^,]*,([^]]*)\\]", "\\1", labs) ),
+                intercept = as.numeric(lm_fit[["coefficients"]]))
+
+# add 0 intercept
+levels[2:9,"intercept"] <- levels[2:breaks,"intercept"] + levels[1,"intercept"]
+
+ggplot() +
+  geom_jitter( data = wage,
+              aes( x = age,
+                   y = wage),
+              alpha = 0.2) +
+  geom_segment( aes(x = levels[,"lower"],
+                    y = levels[,"intercept"],
+                    xend = levels[,"upper"],
+                    yend = levels[,"intercept"]),
+                color = "red", size = 1) 
+```
+
+### ex. 7
+
+**The Wage data set contains a number of other features not explored in this chapter, such as marital status (maritl), job class (jobclass), and others. Explore the relationships between some of these other predictors and wage, and use non-linear fitting techniques in order to fit flexible models to the data. Create plots of the results obtained, and write a summary of your findings.**
+
+
