@@ -18,6 +18,7 @@ library(pls) # PLS and PCA
 library(glmnet)# ridge and lasso
 library(leaps) #subset
 library(boot) # cv glm
+library(splines) #natural and smoothed spline
 ```
 
 ### ex. 1
@@ -141,4 +142,230 @@ ggplot() +
 
 **The Wage data set contains a number of other features not explored in this chapter, such as marital status (maritl), job class (jobclass), and others. Explore the relationships between some of these other predictors and wage, and use non-linear fitting techniques in order to fit flexible models to the data. Create plots of the results obtained, and write a summary of your findings.**
 
+Firs, print predictors vs wage and fit a lm for comparison
+
+```{r}
+wage <- Wage %>% select(-region, -logwage)
+
+wage %>%
+  gather(-wage, key = "var", value = "value") %>% 
+  ggplot(aes(x = value, 
+             fill = cut(wage, 5))) +
+    geom_histogram( stat = "count",
+                    position = "fill") +
+    facet_wrap(~ var, scales = "free")
+```
+
+Methods (all with CV):
+
+- Poly_fit with poly_wrapper()
+- Natural spline
+- Smooth spline
+- Local regression
+
+```{r}
+set.seed(123)
+
+# Poly_fit
+poly_wrapper <- function(data, pred, display = TRUE) {
+  cv_error <- rep(NA, 5)
+  for (i in 1:length(cv_error)) { 
+    lm_formula <- as.formula(paste("wage ∼ poly(", 
+                                   pred, 
+                                   " ,", 
+                                   i,
+                                   ")" ))
+    lm_fit <- glm(lm_formula,
+                  data = data)
+  cv_error[i] <- cv.glm(data , lm_fit , K = 10)$delta[1]
+  }
+  g <- ggplot() +
+         geom_line( aes( x = 1:length(cv_error),
+                         y = cv_error))
+  
+  if(display == TRUE) {
+    print(g)
+    return(cbind("df" = 1:length(cv_error), cv_error))
+    }
+  else return(cbind("df" = 1:length(cv_error), cv_error))
+}
+
+poly_error <- poly_wrapper(wage, "age")
+```
+
+```{r}
+# Natural_spline_fit
+natsp_wrapper <- function(data, pred, display = TRUE) {
+  cv_error <- rep(NA, 20)
+  for (i in 1:length(cv_error)) { 
+    lm_formula <- as.formula(paste("wage ∼ ns(", 
+                                   pred, 
+                                   ", df = ", 
+                                   i,
+                                   ")" ))
+    lm_fit <- glm(lm_formula,
+                  data = data)
+  cv_error[i] <- cv.glm(data , lm_fit , K = 10)$delta[1]
+  }
+  g <- ggplot() +
+         geom_line( aes( x = 1:length(cv_error),
+                         y = cv_error))
+  
+  if(display == TRUE) {
+    print(g)
+    return(cbind("df" = 1:length(cv_error), cv_error))
+    }
+  else return(cbind("df" = 1:length(cv_error), cv_error))
+}
+
+natsp_error <- natsp_wrapper(wage, "age")
+```
+
+```{r}
+# Smoothed_spline_fit
+smooth_wrapper <- function(data, pred, display = FALSE) {
+  
+  smooth_fit <- smooth.spline(x = wage[[pred]] , 
+                              y = wage[["wage"]] ,
+                              cv = TRUE)
+  return( cbind( "df" = smooth_fit[["df"]],
+                 "cv_error" = smooth_fit[["cv.crit"]] ))
+}
+
+smooth_error <- smooth_wrapper(wage, "age")
+```
+
+```{r}
+# Skeleton function for K-fold home-made validation
+
+kfold_wrapper <- function(data, pred, display = TRUE) {
+  k <- 10 # folds of validation
+  fold <- sample(1:k,
+                 dim(data)[1],
+                 replace = TRUE)
+
+  
+  cv_error <- rep(NA, 10)
+  span_vector <- (2/3)^(0:length(cv_error))
+  
+  for (i in 1:length(cv_error)) { 
+    formula <- as.formula(paste("wage ∼ ", 
+                                   pred)) #and other terms if needed
+    fold_error <- rep(NA, k)
+    for( j in 1:k){
+      model_fit <- model_function(formula,
+                         data = data,
+                         subset = (fold != j) )
+      model_preds <- predict( model_fit,
+                              newdata = data[fold == j, pred])
+      fold_error[j] <- mean(sqrt( (data[fold, "wage"] - loess_preds)^2 ))
+      }
+    cv_error[i] <- mean(fold_error)
+  }
+  
+  g <- ggplot() +
+         geom_line( aes( x = 1:length(cv_error),
+                         y = cv_error))
+  
+  if(display == TRUE) {
+    print(g)
+    return(cv_error)
+    }
+  else return(cv_error)
+}
+```
+
+```{r}
+# Loess
+loess_wrapper <- function(data, pred, display = TRUE) {
+  k <- 10 # folds of validation
+  fold <- sample(1:k,
+                 dim(data)[1],
+                 replace = TRUE)
+
+  
+  cv_error <- rep(NA, 10)
+  span_vector <- seq( from = 0.1, 
+                      to = 0.8, 
+                      length.out = length(cv_error))
+  
+  for (i in 1:length(cv_error)) { 
+    formula <- as.formula(paste("wage ∼ ", 
+                                 pred))
+    fold_error <- rep(NA, k)
+    for( j in 1:k){
+      model_fit <- loess(formula,
+                         data = data,
+                         span = span_vector[i],
+                         subset = (fold != j) )
+      model_preds <- predict( model_fit,
+                              newdata = data[fold == j, pred])
+      
+      ### is the formula for error right?
+      fold_error[j] <- sum( (data[fold == j, "wage"] - model_preds)^2 )
+      }
+    cv_error[i] <- mean(sqrt(fold_error))
+  }
+  
+  g <- ggplot() +
+         geom_line( aes( x = span_vector,
+                         y = cv_error))
+  
+  if(display == TRUE) {
+    print(g)
+    return(cbind("span" = span_vector, cv_error))
+    }
+  else return(cbind("span" = span_vector, cv_error))
+}
+
+loess_error <- loess_wrapper(wage, "age")
+```
+
+Now that we have the 4 functions to compute the fit, let's put all of the on a single graph
+
+```{r}
+validation_plot <- function(poly_error, 
+                            natsp_error,
+                            smooth_error,
+                            loess_error) {
+  poly_plot <- ggplot() +
+    geom_line( aes( x = poly_error[,"df"],
+                    y = poly_error[,"cv_error"]))
+  natsp_plot <- ggplot() +
+    geom_line( aes( x = natsp_error[,"df"],
+                    y = natsp_error[,"cv_error"]))
+  smooth_plot <- ggplot() +
+    geom_point( aes( x = smooth_error[,"df"],
+                     y = smooth_error[,"cv_error"])) +
+    geom_hline( yintercept = smooth_error[,"cv_error"])
+  loess_plot <- ggplot() +
+    geom_line( aes( x = loess_error[,"span"],
+                    y = loess_error[,"cv_error"]))
+  ggarrange(poly_plot, natsp_plot, smooth_plot, loess_plot, 
+            ncol = 2, nrow = 2)
+}
+
+validation_plot(poly_error, natsp_error, smooth_error, loess_error)
+```
+
+Predictors:
+
+- marit1
+- race
+- interaction table(wage[,"health"], wage[,"health_ins"])
+
+```{r}
+set.seed(123)
+dims <- dim(wage)[1]
+train <- sample(dims,  dims*0.8)
+
+train_mat <- wage[train,] # model.matrix(wage ∼ ., data = wage[train, ])
+
+poly_error <- poly_wrapper(train_mat, "age", display = FALSE)
+natsp_error <- natsp_wrapper(train_mat, "age", display = FALSE)
+smooth_error <- smooth_wrapper(train_mat, "age", display = FALSE)
+loess_error <- loess_wrapper(train_mat, "age", display = FALSE)
+
+validation_plot(poly_error, natsp_error, smooth_error, loess_error)
+```
 
