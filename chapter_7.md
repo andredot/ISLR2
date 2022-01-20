@@ -1282,3 +1282,209 @@ ggplot() +
 ```
 
 ![](chapter_7_files/figure-markdown_github/unnamed-chunk-31-1.png)
+
+### ex. 10
+
+**This question relates to the College data set.**
+
+**(a) Split the data into a training set and a test set. Using out-of-state tuition as the response and the other variables as the predictors, perform forward stepwise selection on the training set in order to identify a satisfactory model that uses just a subset of the predictors.**
+
+``` r
+college <- College
+resp <- "Outstate"
+
+set.seed(123)
+
+train <- sample( x = 1:dim(college)[1], 
+                 size = 0.8*dim(college)[1])
+test <- (-train) 
+y_test <- college[test, resp]
+
+train_mat <- model.matrix(Outstate ∼ ., data = college[train, ])
+
+plot_reg <- function(regfit_sum) {
+  par(mfrow = c(2, 2))
+  
+  plot(regfit_sum$rss , 
+       xlab = "Number of Variables", 
+       ylab = "RSS",
+       type = "l")
+  
+  plot(regfit_sum$adjr2 , 
+       xlab = "Number of Variables", 
+       ylab = "Adjusted RSq",
+       type = "l")
+  points(which.max(regfit_sum$adjr2), 
+         regfit_sum$adjr2 [which.max(regfit_sum$adjr2)], 
+         col = "red",
+         cex = 2, 
+         pch = 20)
+  
+  plot(regfit_sum$cp, 
+       xlab = "Number of Variables", 
+       ylab = "Cp",
+       type = "l")
+  points(which.min(regfit_sum$cp),
+         regfit_sum$cp[which.min(regfit_sum$cp)], 
+         col = "red",
+         cex = 2, 
+         pch = 20)
+  
+  plot(regfit_sum$bic , 
+       xlab = "Number of Variables", 
+       ylab = "BIC",
+       type = "l")
+  points(which.min(regfit_sum$bic), 
+         regfit_sum$bic[which.min(regfit_sum$bic)], 
+         col = "red",
+         cex = 2, 
+         pch = 20)
+}
+```
+
+``` r
+regfit_fwd <- regsubsets(Outstate ~ ., 
+                         data = college[train,],
+                         nvmax = 18,
+                         method = "forward")
+regfit_fwd_sum <- summary(regfit_fwd)
+plot_reg(regfit_fwd_sum)
+```
+
+![](chapter_7_files/figure-markdown_github/unnamed-chunk-33-1.png)
+
+So it seems that between 11 and 13 variables we have the best results. We will choose 11 as simpler model are preferred
+
+``` r
+# 11-variable model
+
+(coefi <- coef(regfit_fwd, 11) )
+```
+
+    ##   (Intercept)    PrivateYes          Apps        Accept        Enroll 
+    ## -2002.7518586  2604.8342824    -0.2518536     0.8483927    -1.1478290 
+    ##     Top10perc    Room.Board      Personal           PhD   perc.alumni 
+    ##    25.2899335     0.8327798    -0.2759877    27.9273632    45.7642632 
+    ##        Expend     Grad.Rate 
+    ##     0.2112021    21.8924587
+
+``` r
+test_mat <- model.matrix(Outstate ∼ ., data = college[test, ])
+
+fwd_pred <- test_mat[, names(coefi)] %*% coefi
+fwd_error_test <- mean((college[test, resp] - fwd_pred)^2) 
+
+# brutal linear reression model for comparison
+
+coefi17 <- coef(regfit_fwd, 17)
+lr_pred <- test_mat[, names(coefi17)] %*% coefi17
+lr_error_test <- mean((college[test, resp] - lr_pred)^2) 
+
+ggplot() +
+  geom_vline( xintercept = 0) +
+  geom_density( aes(x = college[test, resp] - fwd_pred),
+                fill = "blue", alpha = 0.3) +
+  geom_density( aes(x = college[test, resp] - lr_pred),
+                fill = "gray", alpha = 0.1) +
+  ggtitle(paste("MSE Test = ", fwd_error_test)) +
+  labs(x = "difference between predictedand real")
+```
+
+![](chapter_7_files/figure-markdown_github/unnamed-chunk-34-1.png)
+
+**(b) Fit a GAM on the training data, using out-of-state tuition as the response and the features selected in the previous step as the predictors. Plot the results, and explain your findings.**
+
+We are going to proceed through natural splines on the 11 identified variables. As a first step, we plot each of them against the response variable
+
+``` r
+college11 <- college  %>%
+               select( names(coefi)[-c(1,2)], 
+                       "Private", 
+                       "Outstate" )
+
+college11 %>%
+  gather(-Outstate, key = "var", value = "value") %>% 
+  ggplot() +
+    geom_jitter( aes( x = Outstate,
+                      y = value),
+                alpha = 0.2) +
+    facet_wrap(~ var, scales = "free")
+```
+
+    ## Warning: attributes are not identical across measure variables;
+    ## they will be dropped
+
+![](chapter_7_files/figure-markdown_github/unnamed-chunk-35-1.png)
+
+``` r
+cv_error <- rep(NA, 20)
+
+for (i in 1:length(cv_error)) { 
+  preds <- map( names(college11)[1:10], # keep continuous variables only
+                function(x, i) paste0( "+ ns(",
+                                       x,
+                                       ", df = ",
+                                       i,
+                                       ")"),
+                i = i) %>% 
+    paste( collapse = " " ) %>% 
+    substring(2) #remove initial plus
+  lm_formula <- as.formula(paste(resp, "∼", preds, "+ Private"))
+  lm_fit <- glm(lm_formula,
+                data = college11[train,])
+  cv_error[i] <- cv.glm(college11[train,] , lm_fit , K = 10)$delta[1]
+}
+
+ggplot() +
+  geom_line( aes( x = 1:length(cv_error),
+                  y = cv_error))
+```
+
+![](chapter_7_files/figure-markdown_github/unnamed-chunk-36-1.png)
+
+Not sure that using the same number of degrees of freedom for all the variables is a good idea, but it can be a reasonable assumption that shrink the search space. 4 degrees of freedom for each variable are selected, totaling a loss of 41dfs.
+
+**(c) Evaluate the model obtained on the test set, and explain the results obtained.**
+
+``` r
+best_df <- 4
+preds <- map( names(college11)[1:10], # keep continuous variables only
+              function(x, i) paste0( "+ ns(",
+                                     x,
+                                     ", df = ",
+                                     best_df,
+                                     ")"),
+              i = best_df) %>% 
+  paste( collapse = " " ) %>% 
+  substring(2) #remove initial plus
+gam_formula <- as.formula(paste(resp, "∼", preds, "+ Private"))
+
+gam_fit <- glm(gam_formula,
+               data = college11[train,])
+
+gam_pred <- predict(gam_fit,
+                  interval = "prediction",
+                  newdata = college11[test,])
+gam_error_test <- mean((college11[test, resp] - gam_pred)^2) 
+
+
+ggplot() +
+  geom_vline( xintercept = 0) +
+  geom_density( aes(x = college[test, resp] - lr_pred), # linear regression 
+                fill = "gray", alpha = 0.1) +
+  geom_density( aes(x = college[test, resp] - gam_pred), #gam 11-4
+                fill = "blue", alpha = 0.2) +
+  geom_density( aes(x = college[test, resp] - fwd_pred), # lr 11(fwd)
+                fill = "red", alpha = 0.2) +
+  ggtitle(paste("Blue GAM MSE Test = ", gam_error_test),
+          paste("Red Fwd MSE Test = ", fwd_error_test)) +
+  labs(x = "difference between predicted and real")
+```
+
+![](chapter_7_files/figure-markdown_github/unnamed-chunk-37-1.png)
+
+So by using a natural spline to all the variables we have a model that has a MSE on the test set 20% lower than the linear regression (with 11 or 17 variables are nearly identical MSEs), which suggests that part of the data have a non-linear relationship that is captured by the more flexible fit provided by natural splines with 4 degrees of freedom.
+
+**(d) For which variables, if any, is there evidence of a non-linear relationship with the response?**
+
+It can be easily seen from the p-value of the gam\_fit, where low p-values in 2nd or higher order break point can be a hint of such a non-linear relationship. In fact, "Accept" along with "Enroll" "Room.Board" "perc.alumni" "Expend" and "Grad Rate" seem to suggest such a behaviour.
