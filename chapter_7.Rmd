@@ -1026,8 +1026,8 @@ y <- map( 1:dim(data)[1],
           ∼ as.numeric(data[.x,]) %*% betas) %>% 
       as.numeric() # dot product between row of data and vector of betas
 
- <- 20
-# yes
+rounds <- 20
+
 for(i in 2:rounds) {
   for(j in names(pred_betas)) {
     names_no_j <- setdiff(names(pred_betas), j)
@@ -1044,7 +1044,6 @@ for(i in 2:rounds) {
 ```
 
 ```{r}
-rounds <- 20
 pred_betas %>%
   slice(1:rounds) %>% 
   gather(key = "var", value = "value") %>% 
