@@ -910,3 +910,152 @@ So by using a natural spline to all the variables we have a model that has a MSE
 
 It can be easily seen from the p-value of the gam_fit, where low p-values in 2nd or higher order break point can be a hint of such a non-linear relationship. In fact, "Accept" along with "Enroll" "Room.Board" "perc.alumni"  "Expend" and "Grad Rate" seem to suggest such a behaviour.
 
+### ex 11
+
+**In Section 7.7, it was mentioned that GAMs are generally fit using a backfitting approach. The idea behind backfitting is actually quite simple. We will now explore backfitting in the context of multiple linear regression. Suppose that we would like to perform multiple linear regression, but we do not have software to do so. Instead, we only have software to perform simple linear regression. Therefore, we take the following iterative approach: we repeatedly hold all but one coefficient estimate fixed at its current value, and update only that coefficient estimate using a simple linear regression. The process is continued until convergence—that is, until the coefficient estimates stop changing. We now try this out on a toy example.**
+
+**(a) Generate a response Y and two predictors X1 and X2, with n = 100.**
+
+```{r}
+set.seed(123)
+n <- 100
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+y <- 1.2* x1 + 2*x2 + rnorm(100, sd = 0.2)
+```
+
+**(b) Initialize ˆβ1 to take on a value of your choice. It does not matter what value you choose.**
+
+```{r}
+beta1 <- -3
+```
+
+**Keeping ˆβ1 fixed, fit the model Y − ˆβ1X1 = β0 + β2X2 + ϵ.**
+
+```{r}
+a <- y - beta1 * x1
+beta2 <- lm(a ∼ x2)$coef[2]
+```
+
+**Keeping ˆβ2 fixed, fit the model Y − ˆβ2X2 = β0 + β1X1 + ϵ**
+
+```{r}
+a <- y - beta2 * x2
+beta1 <- lm(a ∼ x1)$coef[2]
+```
+
+**Write a for loop to repeat (c) and (d) 1,000 times. Report the estimates of
+βˆ0, βˆ1, and βˆ2 at each iteration of the for loop. Create a plot in which each of these values is displayed, with ˆβ0, βˆ1, and ˆβ2 each shown in a different color.**
+
+```{r}
+iterations <- 1e3
+coefs <- data.frame( beta0 = rep(NA, iterations),
+                    beta1 = rep(NA, iterations),
+                    beta2 = rep(NA, iterations) )
+for( i in 1:iterations){
+  a <- y - beta1 * x1
+  beta2 <- lm(a ∼ x2)$coef[2]
+  
+  a <- y - beta2 * x2
+  beta1 <- lm(a ∼ x1)$coef[2]
+  beta0 <- lm(a ∼ x1)$coef[1]
+  
+  coefs[i,] <- c(beta0, beta1, beta2)
+}
+
+ggplot(coefs,
+       aes( x = 1:iterations)) +
+  geom_line(aes( y = beta0),
+            color = "blue" ) +
+  geom_line(aes( y = beta1),
+            color = "red" ) +
+  geom_line(aes( y = beta2),
+            color = "green" ) +
+  scale_x_log10()
+```
+
+**(f) Compare your answer in (e) to the results of simply performing multiple linear regression to predict Y using X1 and X2. Use the abline() function to overlay those multiple linear regression coefficient estimates on the plot obtained in (e)**
+
+```{r}
+lm_coefs <-  lm(y ∼ x1 + x2)$coef
+
+ggplot(coefs,
+       aes( x = 1:iterations)) +
+  geom_line(aes( y = beta0),
+            color = "blue" ) +
+  geom_line(aes( y = beta1),
+            color = "red" ) +
+  geom_line(aes( y = beta2),
+            color = "green" ) +
+  geom_hline( yintercept = lm_coefs[1],
+              linetype = "dotted") +
+  geom_hline( yintercept = lm_coefs[2],
+              linetype = "dotted") +
+  geom_hline( yintercept = lm_coefs[3],
+              linetype = "dotted") +
+  geom_vline( xintercept = 2,
+              linetype = "dotted",
+              alpha = 0.5) +
+  scale_x_log10()
+
+```
+
+**(g) On this data set, how many backfitting iterations were required in order to obtain a “good” approximation to the multiple regression coefficient estimates?** After the second iteration results are almost identical to the full lm ones.
+
+### ex. 12
+
+**This problem is a continuation of the previous exercise. In a toy example with p = 100, show that one can approximate the multiple linear regression coefficient estimates by repeatedly performing simple linear regression in a backfitting procedure. How many backfitting iterations are required in order to obtain a “good” approximation to the multiple regression coefficient estimates? Create a plot to justify your answer**
+
+```{r}
+
+p <- 100
+set.seed(123)
+
+betas <- rnorm(p, sd = 5) #true betas
+pred_betas <- data.frame( matrix( rnorm(1e3*p),
+                            nrow = 1e3,
+                            ncol = p))
+
+data <- data.frame( matrix( runif(p*p*10, 
+                                  min = -10, 
+                                  max = 10),
+                            nrow = p*10,
+                            ncol = p))
+
+y <- map( 1:dim(data)[1], 
+          ∼ as.numeric(data[.x,]) %*% betas) %>% 
+      as.numeric() # dot product between row of data and vector of betas
+
+ <- 20
+# yes
+for(i in 2:rounds) {
+  for(j in names(pred_betas)) {
+    names_no_j <- setdiff(names(pred_betas), j)
+    
+    a <- y - as.matrix(data[names_no_j]) %*%
+      as.numeric(pred_betas[i-1, names_no_j])
+    
+    formula <- as.formula(paste0( "a ∼ ", j))
+    pred_betas[i, j] <- coef(lm(formula,
+                                data = data) )[-1]
+  }
+}
+
+```
+
+```{r}
+rounds <- 20
+pred_betas %>%
+  slice(1:rounds) %>% 
+  gather(key = "var", value = "value") %>% 
+  ggplot(aes(x = rep(1:rounds,p), 
+             y = value,
+             color = var)) +
+    geom_line() +
+  geom_vline( xintercept = 8,
+             alpha = 0.5,
+             style = "dotted") +
+  scale_x_log10()
+```
+
+As we can see, from the 8th iteration on, we have reached a sufficient precision in the estimate of beta.
