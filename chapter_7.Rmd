@@ -23,15 +23,19 @@ library(splines) #natural and smoothed spline
 
 ### ex. 1
 
+Made on paper
 
 ### ex. 2
 
+Help
 
 ### ex. 3
 
+Made on paper
 
 ### ex. 4
 
+Made on paper
 
 ### ex. 5
 
