@@ -17,6 +17,8 @@ library(ggpubr)
 library(GGally)
 library(tree)
 library(randomForest)
+library(BART)
+library(gbm) #boosting
 ```
 
 ### ex. 1
@@ -144,5 +146,164 @@ As we can see, the MSE ranges between 17 and 27 in our parameter grid, with a te
 
 ### ex. 8
 
+**In the lab, a classification tree was applied to the Carseats data set after converting Sales into a qualitative response variable. Now we will seek to predict Sales using regression trees and related approaches, treating the response as a quantitative variable.**
 
+**(a) Split the data set into a training set and a test set.**
+
+```{r}
+car <- Carseats
+mse <- list()
+
+set.seed(123)
+train <- sample (1:nrow(car), nrow(car) * 0.8)
+car_test <- car[-train , "Sales"]
+```
+
+**(b) Fit a regression tree to the training set. Plot the tree, and interpret the results. What test MSE do you obtain?**
+
+```{r}
+# first a linear model for comparison
+lm_fit <- lm( Sales ∼ .,
+              data = car,
+              subset = train)
+lm_preds <- predict(lm_fit,
+                    newdata = car[-train,])
+(mse["lm"] <- mean((lm_preds - car_test)^2))
+```
+
+```{r}
+tree_fit <- tree( Sales ∼ .,
+                  data = car,
+                  subset = train)
+tree_preds <- predict(tree_fit,
+                      newdata = car[-train,])
+(mse["tree"] <- mean((tree_preds - car_test)^2))
+```
+
+```{r}
+plot(tree_fit, pretty = 0)
+```
+
+As we can see, Test MSE of a default tree is substantially bigger than the one of a standard linear model.
+
+**(c) Use cross-validation in order to determine the optimal level of tree complexity. Does pruning the tree improve the test MSE?**
+
+```{r}
+cv_car <- cv.tree(tree_fit)
+
+ggplot() +
+  geom_line(aes(x = cv_car[["size"]],
+                y = cv_car[["dev"]]))
+```
+
+From the cross validation a number of split between 13 and 14 seems to minimize test MSE.
+
+```{r}
+prune_car <- prune.tree(tree_fit,
+                        best = 13)
+plot(prune_car)
+text(prune_car, pretty = 0)
+```
+
+```{r}
+pruned_preds <- predict(prune_car,
+                        newdata = car[-train,])
+(mse["pruned"] <- mean((pruned_preds - car_test)^2))
+```
+
+The actual improvement in the test MSE in only modest (almost non-existent), but the model with less splits is definitely more understandable
+
+**(d) Use the bagging approach in order to analyze this data. What test MSE do you obtain? Use the importance() function to determine which variables are most important.**
+
+```{r}
+bagg_fit <- randomForest( Sales ∼ .,
+                          data = car,
+                          subset = train,
+                          mtry = 10,
+                          importance = TRUE)
+
+bagg_preds <- predict(bagg_fit,
+                        newdata = car[-train,])
+(mse["bagging"] <- mean((bagg_preds - car_test)^2))
+```
+
+```{r}
+importance(bagg_fit) %>%
+  as.data.frame() %>%
+  transmute( MSE = `%IncMSE`,
+             NodePurity = IncNodePurity) %>% 
+  rownames_to_column() %>% 
+  arrange(desc(MSE)) %>% 
+  ggplot() +
+    geom_point( aes( x = rowname,
+                     y = MSE,
+                     color = rowname),
+                size = 2) +
+  coord_flip() +
+  ggtitle("% decrease in MSE by predictor")
+```
+
+So as we can see, variables that are most important are ShelveLoc, Price, CompPrice, Age and Advertising.
+
+**(e) Use random forests to analyze this data. What test MSE do you obtain? Use the importance() function to determine which variables are most important. Describe the effect of m, the number of variables considered at each split, on the error rate obtained.**
+
+```{r}
+rf_fit <- randomForest( Sales ∼ .,
+                          data = car,
+                          subset = train,
+                          importance = TRUE)
+
+rf_preds <- predict(rf_fit,
+                        newdata = car[-train,])
+(mse["random forest"] <- mean((rf_preds - car_test)^2))
+```
+
+```{r}
+importance(rf_fit) %>%
+  as.data.frame() %>%
+  transmute( MSE = `%IncMSE`,
+             NodePurity = IncNodePurity) %>% 
+  rownames_to_column() %>% 
+  arrange(desc(MSE)) %>% 
+  ggplot() +
+    geom_point( aes( x = rowname,
+                     y = MSE,
+                     color = rowname),
+                size = 2) +
+  coord_flip() +
+  ggtitle("% decrease in MSE by predictor")
+
+```
+
+While in bagging the number of variables used at each split is the same as the predictors, in the random_forest 3 predictors, thus resulting in decorrelation of tress. Sometimes this has a good effect on the model, sometimes it don't (like in this case).
+
+Moreover, we could decide a better m by cross_validation, even if it is not standard implementation of the library.
+
+**(f) Now analyze the data using BART, and report your results.**
+
+```{r}
+x_train <- model.matrix( Sales ∼ .,
+                         data = car[train,])
+y_train <- car[train, "Sales"]
+x_test <- model.matrix( Sales ∼ .,
+                         data = car[-train,])
+
+bart_fit <- gbart(x_train , y_train , x.test = x_test)
+bart_preds <- bart_fit[["yhat.test.mean"]]
+(mse["BART"] <- mean((bart_preds - car_test)^2))
+```
+
+```{r}
+mse %>% 
+  unlist() %>%
+  as.data.frame() %>% 
+  ggplot() +
+    geom_point( aes( x = names(mse),
+                     y = .,
+                     color = names(mse)),
+                size = 2) +
+  coord_flip() +
+  ggtitle("MSE")
+
+```
 
