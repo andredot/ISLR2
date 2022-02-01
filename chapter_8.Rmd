@@ -17,6 +17,7 @@ library(ggpubr)
 library(GGally)
 library(tree)
 library(randomForest)
+library(glmnet)
 library(BART)
 library(gbm) #boosting
 ```
@@ -306,4 +307,262 @@ mse %>%
   ggtitle("MSE")
 
 ```
+
+### ex. 9
+
+**This problem involves the OJ data set which is part of the ISLR2 package.**
+
+**(a) Create a training set containing a random sample of 800 observations, and a test set containing the remaining observations.**
+
+```{r}
+oj <- ISLR2::OJ
+mse <- vector()
+
+set.seed(123)
+train <- sample (1:nrow(oj), 800)
+oj_test <- oj[-train , "Purchase"]
+```
+
+(b) Fit a tree to the training data, with Purchase as the response and the other variables as predictors. Use the summary() function to produce summary statistics about the tree, and describe the results obtained. What is the training error rate? How many terminal nodes does the tree have?
+
+```{r}
+tree_fit <- tree( Purchase ∼ .,
+                  data = oj,
+                  subset = train)
+summary(tree_fit)
+```
+
+As we can see from the summary, the tree has 8 terminal nodes, using only 2 variables to accurately predict the outcome. Train classification error = 16.5%, while on the test set the error rate is 18.5% (see later).
+
+But let's fit a simple logistic regression to have a comparison.
+
+```{r}
+lr_fit <- glm( Purchase ∼ .,
+                  data = oj,
+                  subset = train,
+                  family = binomial)
+
+lr_preds <- predict(lr_fit,
+                    newdata = oj[-train,],
+                    type = "response")
+table(lr_preds > 0.5, oj_test == "MM")
+(mse["lr"] <- sum((lr_preds > 0.5) != (oj_test == "MM"))/length(oj_test) )
+
+```
+
+So the test error (accuracy) from the logistic regression is slightly less than the one from the tree
+
+**(c) Type in the name of the tree object in order to get a detailed text output. Pick one of the terminal nodes, and interpret the information displayed.**
+
+```{r}
+tree_fit
+```
+
+So if we take `3) LoyalCH > 0.5036 450  357.10 CH ( 0.86444 0.13556 )` we can see that the third split involves the variable LoyalCH, which is described by:
+
+- var, the variable used at the split (or "<leaf>" for a terminal node), 
+- n, the (weighted) number of cases reaching that node, 
+- dev the deviance of the node, 
+- yval, the fitted value at the node (the mean for regression trees, a majority class for classification trees)
+- split, a two-column matrix of the labels for the left and right splits at the node. 
+
+**(d) Create a plot of the tree, and interpret the results.**
+
+```{r}
+plot(tree_fit)
+text(tree_fit , pretty = 0)
+```
+
+As we can see, to obtain a good enough tree (where in each step we maximize the reduction in impurity) until terminal nodes are too small to split, we only use two variable (PriceDiff and LoyalCH).
+
+**(e) Predict the response on the test data, and produce a confusion matrix comparing the test labels to the predicted test labels. What is the test error rate?**
+
+```{r}
+tree_preds <- predict(tree_fit,
+                      newdata = oj[-train,],
+                      type = "class")
+(mse["tree"] <- sum(tree_preds != oj_test)/length(oj_test) )
+```
+
+Test error rate is slightly over the training error rate, with most of error coming from MM classified as CH.
+
+```{r}
+table(tree_preds, oj_test)
+```
+
+**(f) Apply the cv.tree() function to the training set in order to determine the optimal tree size.**
+
+```{r}
+( cv_tree_fit <- cv.tree(tree_fit , FUN = prune.misclass) )
+```
+
+**(g) Produce a plot with tree size on the x-axis and cross-validated classification error rate on the y-axis.**
+
+```{r}
+ggplot() +
+  geom_line( aes( x = cv_tree_fit[["size"]],
+                  y = cv_tree_fit[["dev"]]))
+```
+
+**(h) Which tree size corresponds to the lowest cross-validated classification error rate?** 
+So 5 seems to be the better parameter obtained through cross-validation.
+
+**(i) Produce a pruned tree corresponding to the optimal tree size obtained using cross-validation.**
+
+```{r}
+pruned_tree_fit <- prune.misclass(tree_fit , best = 5)
+plot(pruned_tree_fit)
+text(pruned_tree_fit , pretty = 0)
+```
+
+(j) Compare the training error rates between the pruned and unpruned trees. Which is higher?
+
+```{r}
+pruned_preds <- predict(pruned_tree_fit,
+                        newdata = oj[-train,],
+                        type = "class")
+(mse["pruned"] <- sum(pruned_preds != oj_test)/length(oj_test) )
+```
+
+(k) Compare the test error rates between the pruned and unpruned trees. Which is higher?**
+
+```{r}
+mse %>% 
+  unlist() %>%
+  as.data.frame() %>% 
+  ggplot() +
+    geom_point( aes( x = names(mse),
+                     y = .,
+                     color = names(mse)),
+                size = 2) +
+  coord_flip() +
+  ggtitle("MSE")
+```
+
+They are the same error rate, which means that additional leaves did not bring any additional predictive accuracy on the test set.
+
+### ex. 10
+
+**We now use boosting to predict Salary in the Hitters data set.**
+
+**(a) Remove the observations for whom the salary information is unknown, and then log-transform the salaries.**
+
+```{r}
+hit <- Hitters
+hit %>%
+  summarise_all(funs(sum(is.na(.))))
+```
+
+As we can see, out of 322 obs, 59 does not have a salary.
+
+```{r}
+hit <-  hit %>%
+  filter( !is.na(Salary) ) %>% 
+  mutate( logSalary = log(Salary)) %>% 
+  select(-Salary)
+```
+
+**(b) Create a training set consisting of the first 200 observations, and a test set consisting of the remaining observations.**
+
+```{r}
+train <- 1:200
+hit_test <- hit[-train, "logSalary"]
+```
+
+**(c) Perform boosting on the training set with 1,000 trees for a range of values of the shrinkage parameter λ. Produce a plot with different shrinkage values on the x-axis and the corresponding training set MSE on the y-axis.**
+
+```{r}
+data <- data.frame(
+  lambda = 1e-3*1:100,
+  trainMSE = double(length = 100),
+  testMSE = double(length = 100)
+  )
+
+for(i in 1:100) {
+  boost_fit <- gbm(logSalary ∼ ., 
+                 data = hit[train , ], 
+                 distribution = "gaussian",
+                 n.trees = 1e3, 
+                 interaction.depth = 4,
+                 shrinkage = data[["lambda"]])  
+  data[i, "trainMSE"] <- last(boost_fit[["train.error"]])
+  
+  boost_pred <- predict(boost_fit,
+                        newdata = hit[-train,])
+  data[i, "testMSE"] <- mean((boost_pred - hit_test)^2)
+}
+
+ggplot(data) +
+  geom_point( aes(x = lambda,
+                 y = trainMSE),
+             color = "green")
+```
+
+**(d) Produce a plot with different shrinkage values on the x-axis and the corresponding test set MSE on the y-axis.**
+
+```{r}
+ggplot(data,
+       aes(x = lambda,
+                  y = testMSE)) +
+      geom_point( color = "blue") +
+  geom_smooth()
+```
+
+[first-run with lambda between 1e-4 and 1e-2] The test error is lower than the train error, uncommon but possible (this suggest an underfitting of the curve, given by too few trees of a too low lambda).
+
+[current run with lambda 10x bigger] Problem solved.
+
+**(e) Compare the test MSE of boosting to the test MSE that results from applying two of the regression approaches seen in Chapters 3 and 6.**
+
+```{r}
+lm_fit <- glm( logSalary ∼ .,
+              data = hit,
+              subset = train)
+lm_preds <- predict(lm_fit,
+                    newdata = hit[-train,])
+(mean((lm_preds - hit_test)^2))
+```
+
+```{r}
+#ridge reg
+hit_mat <- model.matrix(logSalary ∼ ., hit)[, -1]
+hit_train <- hit[train, "logSalary"]
+
+ridge_fit <- glmnet(hit_mat[train,], hit_train, 
+                    alpha = 0)
+
+cv_out <- cv.glmnet(hit_mat[train,],
+                    hit_train, 
+                    alpha = 0)
+# plot(cv_out)
+ridge_preds <- predict(ridge_fit , 
+                      s = cv_out[["lambda.min"]] , 
+                      newx = hit_mat[-train,])
+(mean((ridge_preds - hit_test)^2))
+```
+
+**(f) Which variables appear to be the most important predictors in the boosted model?**
+
+```{r}
+summary(boost_fit) %>% 
+  filter(rel.inf > 0)
+```
+
+Most 5 important variables seem to be CAtBat, CWalks, CHits, CRBI and CRuns.
+
+**(g) Now apply bagging to the training set. What is the test set MSE for this approach?**
+
+```{r}
+bag_fit <- randomForest(logSalary ∼ ., 
+                        data = hit,
+                        subset = train , 
+                        mtry = 19,
+                        importance = TRUE)
+bag_pred <- predict(bag_fit,
+                        newdata = hit[-train,])
+( mean((bag_pred - hit_test)^2) )
+```
+
+The test set with bagging is significantly lower than any other method.
+
 
