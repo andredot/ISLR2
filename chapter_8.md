@@ -346,6 +346,7 @@ bart_preds <- bart_fit[["yhat.test.mean"]]
     ## [1] 1.664449
 
 ``` r
+# plot snip
 mse %>% 
   unlist() %>%
   as.data.frame() %>% 
@@ -946,3 +947,268 @@ bag_pred <- predict(bag_fit,
     ## [1] 0.2333398
 
 The test set with bagging is significantly lower than any other method.
+
+### ex. 11
+
+**This question uses the Caravan data set.**
+
+**(a) Create a training set consisting of the first 1,000 observations, and a test set consisting of the remaining observations.**
+
+``` r
+caravan <- Caravan %>% 
+  mutate(Purchase = ifelse(Purchase == "Yes", 1, 0))
+train <- 1:1e3
+caravan_test <- caravan[-train, "Purchase"]
+```
+
+**(b) Fit a boosting model to the training set with Purchase as the response and the other variables as predictors. Use 1,000 trees, and a shrinkage value of 0.01. Which predictors appear to be the most important?**
+
+``` r
+boost_fit <- gbm(Purchase ∼ ., 
+               data = caravan[train , ],
+               n.trees = 1e3, 
+               interaction.depth = 4,
+               shrinkage = 1e-2)  
+```
+
+    ## Distribution not specified, assuming bernoulli ...
+
+    ## Warning in gbm.fit(x = x, y = y, offset = offset, distribution = distribution, :
+    ## variable 50: PVRAAUT has no variation.
+
+    ## Warning in gbm.fit(x = x, y = y, offset = offset, distribution = distribution, :
+    ## variable 71: AVRAAUT has no variation.
+
+``` r
+summary(boost_fit) %>% 
+  filter(rel.inf > 0)
+```
+
+![](chapter_8_files/figure-markdown_github/unnamed-chunk-42-1.png)
+
+    ##               var     rel.inf
+    ## PPERSAUT PPERSAUT 7.305060258
+    ## MKOOPKLA MKOOPKLA 5.115027288
+    ## MGODGE     MGODGE 4.598542635
+    ## PBRAND     PBRAND 4.338981776
+    ## MOPLHOOG MOPLHOOG 4.188300789
+    ## MOSTYPE   MOSTYPE 3.768029815
+    ## MBERMIDD MBERMIDD 3.716325363
+    ## MAUT2       MAUT2 3.502362359
+    ## MINK3045 MINK3045 3.420695978
+    ## MBERARBG MBERARBG 2.974193521
+    ## MGODPR     MGODPR 2.856230271
+    ## MSKB1       MSKB1 2.673218079
+    ## MSKC         MSKC 2.620917551
+    ## MSKA         MSKA 2.535620815
+    ## MOPLMIDD MOPLMIDD 2.382455434
+    ## MBERARBO MBERARBO 2.294452044
+    ## MAUT1       MAUT1 2.118395940
+    ## PWAPART   PWAPART 1.992590069
+    ## MFWEKIND MFWEKIND 1.980427024
+    ## MBERHOOG MBERHOOG 1.877021310
+    ## MRELGE     MRELGE 1.838660094
+    ## MINK7512 MINK7512 1.810207800
+    ## MINKM30   MINKM30 1.717330472
+    ## MFALLEEN MFALLEEN 1.618696896
+    ## MSKB2       MSKB2 1.617449800
+    ## MRELOV     MRELOV 1.616047444
+    ## MINKGEM   MINKGEM 1.559524541
+    ## MAUT0       MAUT0 1.526231284
+    ## MFGEKIND MFGEKIND 1.487028029
+    ## MZFONDS   MZFONDS 1.458897457
+    ## MHHUUR     MHHUUR 1.423230954
+    ## MGODRK     MGODRK 1.379512428
+    ## MGODOV     MGODOV 1.280825303
+    ## MSKD         MSKD 1.277193965
+    ## MINK4575 MINK4575 1.265927438
+    ## MZPART     MZPART 1.230986900
+    ## ABRAND     ABRAND 1.185835056
+    ## MHKOOP     MHKOOP 1.049120928
+    ## MGEMLEEF MGEMLEEF 0.970397633
+    ## MRELSA     MRELSA 0.945790799
+    ## APERSAUT APERSAUT 0.825083753
+    ## MGEMOMV   MGEMOMV 0.739176745
+    ## MBERZELF MBERZELF 0.606993970
+    ## PMOTSCO   PMOTSCO 0.597898512
+    ## MOSHOOFD MOSHOOFD 0.565971089
+    ## MOPLLAAG MOPLLAAG 0.550601937
+    ## MBERBOER MBERBOER 0.426427680
+    ## PLEVEN     PLEVEN 0.386880397
+    ## PBYSTAND PBYSTAND 0.370196709
+    ## MINK123M MINK123M 0.298844059
+    ## MAANTHUI MAANTHUI 0.049459886
+    ## ALEVEN     ALEVEN 0.036938604
+    ## PFIETS     PFIETS 0.016395891
+    ## PWALAND   PWALAND 0.006754382
+    ## PAANHANG PAANHANG 0.004632846
+
+We have 53 non-zero predictors, in a wide distribution of relative importance. Most relevant are PPERSAUT, MGODGE and MKOOPKLA.
+
+**(c) Use the boosting model to predict the response on the test data. Predict that a person will make a purchase if the estimated probability of purchase is greater than 20 %. Form a confusion matrix. What fraction of the people predicted to make a purchase do in fact make one? How does this compare with the results obtained from applying KNN or logistic regression to this data set?**
+
+``` r
+boost_pred <- predict(boost_fit,
+                      newdata = caravan[-train,],
+                      type = "response")
+```
+
+    ## Using 1000 trees...
+
+``` r
+(t <- table((boost_pred > 0.2), caravan_test) )
+```
+
+    ##        caravan_test
+    ##            0    1
+    ##   FALSE 4338  258
+    ##   TRUE   195   31
+
+``` r
+paste("Fraction of predicted + that make a purchase = ",
+      t[2,2] / sum(t[2,]) )
+```
+
+    ## [1] "Fraction of predicted + that make a purchase =  0.13716814159292"
+
+This compares poorly with the LR approach (fraction = 33%) and the knn approach (fraction = 26%), without a clear reason to prefer this method, since probably the company will try to convince more than 33 clients to purchase the insurance.
+
+### ex. 12
+
+**Apply boosting, bagging, random forests, and BART to a data set of your choice. Be sure to fit the models on a training set and to evaluate their performance on a test set. How accurate are the results compared to simple methods like linear or logistic regression? Which of these approaches yields the best performance?**
+
+I decided to apply these methods at the boston dataset, to predict crime rate (crim) from the other predictors.
+
+``` r
+boston <- Boston
+mse <- list()
+
+set.seed(123)
+train <- sample (1:nrow(boston), nrow(boston) * 0.8)
+boston_test <- boston[-train , "crim"]
+```
+
+Here the code for LR, boosting, bagging, random forest and BART
+
+``` r
+# first a linear model for comparison
+lm_fit <- lm( crim ∼ .,
+              data = boston,
+              subset = train)
+lm_preds <- predict(lm_fit,
+                    newdata = boston[-train,])
+(mse["lm"] <- mean((lm_preds - boston_test)^2))
+```
+
+    ## [1] 19.42308
+
+``` r
+#bagging
+bagg_fit <- randomForest( crim ∼ .,
+                          data = boston,
+                          subset = train,
+                          mtry = 12,
+                          importance = TRUE)
+
+bagg_preds <- predict(bagg_fit,
+                      newdata = boston[-train,])
+(mse["bagging"] <- mean((bagg_preds - boston_test)^2))
+```
+
+    ## [1] 11.0066
+
+``` r
+# random-forest
+rf_fit <- randomForest( crim ∼ .,
+                        data = boston,
+                        subset = train,
+                        importance = TRUE)
+
+rf_preds <- predict(rf_fit,
+                    newdata = boston[-train,])
+(mse["random forest"] <- mean((rf_preds - boston_test)^2))
+```
+
+    ## [1] 10.85285
+
+``` r
+# BART
+x_train <- model.matrix( crim ∼ .,
+                         data = boston[train,])
+y_train <- boston[train, "crim"]
+x_test <- model.matrix( crim ∼ .,
+                        data = boston[-train,])
+
+bart_fit <- gbart(x_train , y_train , x.test = x_test)
+```
+
+    ## *****Calling gbart: type=1
+    ## *****Data:
+    ## data:n,p,np: 404, 12, 102
+    ## y1,yn: 42.045059, -3.632161
+    ## x1,x[n*p]: 0.000000, 36.200000
+    ## xp1,xp[np*p]: 18.000000, 22.000000
+    ## *****Number of Trees: 200
+    ## *****Number of Cut Points: 21 ... 100
+    ## *****burn,nd,thin: 100,1000,1
+    ## *****Prior:beta,alpha,tau,nu,lambda,offset: 2,0.95,1.5727,3,9.29848,3.70104
+    ## *****sigma: 6.909094
+    ## *****w (weights): 1.000000 ... 1.000000
+    ## *****Dirichlet:sparse,theta,omega,a,b,rho,augment: 0,0,1,0.5,1,12,0
+    ## *****printevery: 100
+    ## 
+    ## MCMC
+    ## done 0 (out of 1100)
+    ## done 100 (out of 1100)
+    ## done 200 (out of 1100)
+    ## done 300 (out of 1100)
+    ## done 400 (out of 1100)
+    ## done 500 (out of 1100)
+    ## done 600 (out of 1100)
+    ## done 700 (out of 1100)
+    ## done 800 (out of 1100)
+    ## done 900 (out of 1100)
+    ## done 1000 (out of 1100)
+    ## time: 9s
+    ## trcnt,tecnt: 1000,1000
+
+``` r
+bart_preds <- bart_fit[["yhat.test.mean"]]
+(mse["BART"] <- mean((bart_preds - boston_test)^2))
+```
+
+    ## [1] 13.35337
+
+``` r
+# boost
+boost_fit <- gbm(crim ∼ ., 
+                 data = boston[train , ], 
+                 distribution = "gaussian",
+                 n.trees = 1e3, 
+                 interaction.depth = 4,
+                 shrinkage = 1e-2)
+boost_pred <- predict(boost_fit,
+                      newdata = boston[-train,])
+```
+
+    ## Using 1000 trees...
+
+``` r
+mse["boost"] <- mean((boost_pred - boston_test)^2)
+
+# plot snip
+mse %>% 
+  unlist() %>%
+  as.data.frame() %>% 
+  ggplot() +
+  geom_point( aes( x = names(mse),
+                   y = .,
+                   color = names(mse)),
+              size = 2) +
+  coord_flip() +
+  ggtitle("Test MSE")
+```
+
+![](chapter_8_files/figure-markdown_github/unnamed-chunk-46-1.png)
+
+Best performance is given from random forest, even if all the other are comparable in terms of test MSE, all of them significantly lower than the linear regression. Nevertheless, MSE is 11%, which means that 50% predictions had a &gt;11% error in the predicted crime rate.

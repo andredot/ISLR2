@@ -295,6 +295,7 @@ bart_preds <- bart_fit[["yhat.test.mean"]]
 ```
 
 ```{r}
+# plot snip
 mse %>% 
   unlist() %>%
   as.data.frame() %>% 
@@ -565,4 +566,130 @@ bag_pred <- predict(bag_fit,
 
 The test set with bagging is significantly lower than any other method.
 
+### ex. 11
 
+**This question uses the Caravan data set.**
+
+**(a) Create a training set consisting of the first 1,000 observations, and a test set consisting of the remaining observations.**
+
+```{r}
+caravan <- Caravan %>% 
+  mutate(Purchase = ifelse(Purchase == "Yes", 1, 0))
+train <- 1:1e3
+caravan_test <- caravan[-train, "Purchase"]
+```
+
+**(b) Fit a boosting model to the training set with Purchase as the response and the other variables as predictors. Use 1,000 trees, and a shrinkage value of 0.01. Which predictors appear to be the most important?**
+
+```{r}
+boost_fit <- gbm(Purchase ∼ ., 
+               data = caravan[train , ],
+               n.trees = 1e3, 
+               interaction.depth = 4,
+               shrinkage = 1e-2)  
+
+summary(boost_fit) %>% 
+  filter(rel.inf > 0)
+```
+
+We have 53 non-zero predictors, in a wide distribution of relative importance. Most relevant are PPERSAUT, MGODGE and MKOOPKLA.
+
+**(c) Use the boosting model to predict the response on the test data. Predict that a person will make a purchase if the estimated probability of purchase is greater than 20 %. Form a confusion matrix. What fraction of the people predicted to make a purchase do in fact make one? How does this compare with the results obtained from applying KNN or logistic regression to this data set?**
+
+```{r}
+boost_pred <- predict(boost_fit,
+                      newdata = caravan[-train,],
+                      type = "response")
+(t <- table((boost_pred > 0.2), caravan_test) )
+```
+
+```{r}
+paste("Fraction of predicted + that make a purchase = ",
+      t[2,2] / sum(t[2,]) )
+```
+
+This compares poorly with the LR approach (fraction = 33%) and the knn approach (fraction = 26%), without a clear reason to prefer this method, since probably the company will try to convince more than 33 clients to purchase the insurance.
+
+### ex. 12
+
+**Apply boosting, bagging, random forests, and BART to a data set of your choice. Be sure to fit the models on a training set and to evaluate their performance on a test set. How accurate are the results compared to simple methods like linear or logistic regression? Which of these approaches yields the best performance?**
+
+I decided to apply these methods at the boston dataset, to predict crime rate (crim) from the other predictors.
+
+```{r}
+boston <- Boston
+mse <- list()
+
+set.seed(123)
+train <- sample (1:nrow(boston), nrow(boston) * 0.8)
+boston_test <- boston[-train , "crim"]
+```
+
+Here the code for LR, boosting, bagging, random forest and BART
+
+```{r}
+# first a linear model for comparison
+lm_fit <- lm( crim ∼ .,
+              data = boston,
+              subset = train)
+lm_preds <- predict(lm_fit,
+                    newdata = boston[-train,])
+(mse["lm"] <- mean((lm_preds - boston_test)^2))
+
+#bagging
+bagg_fit <- randomForest( crim ∼ .,
+                          data = boston,
+                          subset = train,
+                          mtry = 12,
+                          importance = TRUE)
+
+bagg_preds <- predict(bagg_fit,
+                      newdata = boston[-train,])
+(mse["bagging"] <- mean((bagg_preds - boston_test)^2))
+
+# random-forest
+rf_fit <- randomForest( crim ∼ .,
+                        data = boston,
+                        subset = train,
+                        importance = TRUE)
+
+rf_preds <- predict(rf_fit,
+                    newdata = boston[-train,])
+(mse["random forest"] <- mean((rf_preds - boston_test)^2))
+
+# BART
+x_train <- model.matrix( crim ∼ .,
+                         data = boston[train,])
+y_train <- boston[train, "crim"]
+x_test <- model.matrix( crim ∼ .,
+                        data = boston[-train,])
+
+bart_fit <- gbart(x_train , y_train , x.test = x_test)
+bart_preds <- bart_fit[["yhat.test.mean"]]
+(mse["BART"] <- mean((bart_preds - boston_test)^2))
+
+# boost
+boost_fit <- gbm(crim ∼ ., 
+                 data = boston[train , ], 
+                 distribution = "gaussian",
+                 n.trees = 1e3, 
+                 interaction.depth = 4,
+                 shrinkage = 1e-2)
+boost_pred <- predict(boost_fit,
+                      newdata = boston[-train,])
+mse["boost"] <- mean((boost_pred - boston_test)^2)
+
+# plot snip
+mse %>% 
+  unlist() %>%
+  as.data.frame() %>% 
+  ggplot() +
+  geom_point( aes( x = names(mse),
+                   y = .,
+                   color = names(mse)),
+              size = 2) +
+  coord_flip() +
+  ggtitle("Test MSE")
+```
+
+Best performance is given from random forest, even if all the other are comparable in terms of test MSE, all of them significantly lower than the linear regression. Nevertheless, MSE is 11%, which means that 50% predictions had a >11% error in the predicted crime rate.
