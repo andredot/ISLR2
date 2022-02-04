@@ -1,0 +1,84 @@
+---
+title: "ISLR Ch.11"
+output: github_document
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook.
+When you execute code within the notebook, the results appear beneath the code.
+
+```{r, include = FALSE}
+library(tidyverse)
+library(reshape)
+library(ISLR2)
+library(ggpubr)
+library(GGally)
+library(tree)
+library(randomForest)
+library(glmnet)
+library(BART)
+library(gbm) #boosting
+```
+
+### ex. 1
+
+**For each example, state whether or not the censoring mechanism is independent. Justify your answer.**
+
+**(a) In a study of disease relapse, due to a careless research scientist, all patients whose phone numbers begin with the number “2” are lost to follow up.** Independent, there is no reason to believe that a link between phone number and disease exists.
+
+**(b) In a study of longevity, a formatting error causes all patient ages that exceed 99 years to be lost (i.e. we know that those patients are more than 99 years old, but we do not know their exact ages).** Dependent, longevity depends on age. Censoring age will likely modify the results of the longevity study.
+
+**(c) Hospital A conducts a study of longevity. However, very sick patients tend to be transferred to Hospital B, and are lost to follow up.** Dependent, sickness is related to the censoring event.
+
+**(d) In a study of unemployment duration, the people who find work earlier are less motivated to stay in touch with study investigators, and therefore are more likely to be lost to follow up.** Dependent, since the censoring time dependent on the feature "time(work find)".
+
+**(e) In a study of pregnancy duration, women who deliver their babies pre-term are more likely to do so away from their usual hospital, and thus are more likely to be censored, relative to women who deliver full-term babies.** Dependent, since baby pre-term status influence if the data is censored.
+
+**(f) A researcher wishes to model the number of years of education of the residents of a small town. Residents who enroll in college out of town are more likely to be lost to follow up, and are also more likely to attend graduate school, relative to those who attend college in town.** Dependent, reasons are in text.
+
+**(g) Researchers conduct a study of disease-free survival (i.e. time until disease relapse following treatment). Patients who have not relapsed within five years are considered to be cured, and thus their survival time is censored at five years.** If it is a reasonable assumption to believe that recurrence happens in the first 5 years, then it's not dependent (time T of relapse is non-defined).
+
+**(h) We wish to model the failure time for some electrical component. This component can be manufactured in Iowa or in Pittsburgh, with no difference in quality. The Iowa factory opened five years ago, and so components manufactured in Iowa are censored at five years. The Pittsburgh factory opened two years ago, so those components are censored at two years.** Censoring time depends on the feature "production site", for pieces >2 years old
+
+**(i) We wish to model the failure time of an electrical component made in two different factories, one of which opened before the other. We have reason to believe that the components manufactured in the factory that opened earlier are of higher quality.** Censoring time depends on the feature "production site", for pieces >2 years old
+
+### ex. 2
+
+**We conduct a study with n = 4 participants who have just purchased cell phones, in order to model the time until phone replacement. The first participant replaces her phone after 1.2 years. The second participant still has not replaced her phone at the end of the two-year study period. The third participant changes her phone number and is lost to follow up (but has not yet replaced her phone) 1.5 years into the study. The fourth participant replaces her phone after 0.2 years. For each of the four participants (i =1,. .., 4), answer the following questions using the notation introduced in Section 11.1:**
+
+**(a) Is the participant’s cell phone replacement time censored?** 1 No, 2 Yes, 3 Yes, 4 No
+
+**(b) Is the value of ci known, and if so, then what is it?** 1 unobserved (but 2years at max), 2 2years, 3 1.5years, 4 unobserved (but 2years at max)
+
+**(c) Is the value of ti known, and if so, then what is it?** 1 1.2 years, 2 No, 3 No, 4 0.2years
+
+**(d) Is the value of yi known, and if so, then what is it?** 1 1.2 years, 2 2years, 3 1.5years, 4 0.2years
+
+**(e) Is the value of δi known, and if so, then what is it?** 1 1 (event happened), 2 0 (censored event), 3 0(censored), 4 1(event happened)
+
+### ex. 3
+
+**For the example in Exercise 2, report the values of K, d1,. .., dK, r1,. .., rK,and q1,. .., qK, where this notation was defined in Section 11.3.**
+
+- K = 4, we proceed to reorder patients as they have the event
+- d1 = 0.2years, d4 = 1.2years, d2 = d4 = undefined
+- r1(t = 0.2) = 4, r4(t = 1.2) = 2
+- q1 = 1, q4 = 1
+
+### ex. 4
+
+**This problem makes use of the Kaplan-Meier survival curve displayed in Figure 11.9. The raw data that went into plotting this survival curve is given in Table 11.4. The covariate column of that table is not needed for this problem.**
+
+**(a) What is the estimated probability of survival past 50 days?** 0.6
+
+**(b) Write out an analytical expression for the estimated survival function.** y =
+
+- 1 if t < 26.5
+- 0.8 if 26.5 < t < 37.5
+- 0.6 if 37.5 < t < 57.3
+- 0.4 t > 57.3
+
+
+
