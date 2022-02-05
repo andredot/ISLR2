@@ -76,9 +76,21 @@ library(gbm) #boosting
 **(b) Write out an analytical expression for the estimated survival function.** y =
 
 - 1 if t < 26.5
-- 0.8 if 26.5 < t < 37.5
-- 0.6 if 37.5 < t < 57.3
-- 0.4 t > 57.3
+- 0.8 if 26.5 <= t < 37.5
+- 0.6 if 37.5 <= t < 57.3
+- 0.4 if t >= 57.3
 
+### ex.5
+
+**Sketch the survival function given by the equation S(t)= 0.8 if t< 31; 0.5 if 31 ≤ t< 77; 0.22 if 77 ≤ t.**
+
+```{r}
+ggplot() +
+  geom_step( aes( x = c(0,31,77,100),
+                  y = c(0.8, 0.5, 0.22, 0.22))) +
+  coord_cartesian(ylim = c(0,1))
+```
+
+### ex.6
 
 
