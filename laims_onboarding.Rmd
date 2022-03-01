@@ -1,0 +1,158 @@
+---
+title: "LAIMS Onboarding"
+output: html_notebook
+---
+
+Welcome on board on LAIMS. This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. 
+
+# People
+
+Here you can find a quick introduction of the current (and past people of LAIMS), contacts and areas of expertise
+
+- Corrado Lanera...
+- Silvano Salaris...
+- Andrea Pedot - doctor in training here for his thesis, currently living in Austria. Thesis will focus on Predictive modelling. R, QGis (and a bit of python)
+- Alessandra Cas...
+- Andrea Francavilla...
+- Carlotta Borghini
+- Patrizia ...
+
+# Physical and digital space
+
+LAIMS official lab is in Via Loredan, 18 - 35131 Padova.
+
+The official telegram group is "LAIMS internals", ask Corrado to join. Please join also [PuffRbacco](https://t.me/puffRbacco) to stay up-to-date.
+
+Microsoft teams requires standard setup to be part of "UBEP" and "LAIMS" workspace (join with a @ubep.unipd.it mail), ask Corrado to join. The same email is also used for communications.
+
+# Basic software you will need
+
+- set up R and R Studio from respective websites
+- set up Github (ask Corrado to be part of UBEP private repo)
+- set up Kraken with [this guide](https://corradolanera.github.io/git-github-gitkraken/)
+- Connect Kraken to Github
+- Connect Github to R with this [Happy git with R](https://happygitwithr.com/), the tutorial works also for previous bullet points
+
+Now you are ready to clone your first repo and to start you project
+
+# Standard operating procedures
+
+## Diagrams
+
+Software can be found [here](https://github.com/jgraph/drawio-desktop/releases/tag/v13.6.2)
+
+#### Formatting
+
+-   All diagrams are created with diagrams.net,
+    which can be [used online](https://app.diagrams.net/)
+    or [downloaded](https://github.com/jgraph/drawio-desktop/releases/tag/v13.6.2)
+    from [the project's GitHub repository](https://github.com/jgraph/drawio)
+    (approximately 100MB).
+
+-   Save all diagrams as "Editable SVG"
+    (a superset of the SVG standard that includes information about anchor points and connections).
+
+-   Use the "Sketch" style,
+    which can be chosen from the "Style" menu when no elements are selected.
+    (See [this blog post](https://www.diagrams.net/blog/rough-style) for details.)
+
+-   Use #FEFEFF (very pale blue) as a background color
+    and #000080 (very dark blue) for lines and text.
+    Use 1pt lines, no fill, and 12pt Helvetica.
+    If there is a central concept,
+    give it a 3pt outline
+    and make the text bold and italic
+
+-   Connect both ends of lines to anchor points on concepts
+    and move text as needed so that it does *not* lie on the line.
+
+-   When mentioning specific functions, do _not_ put () after the function's name
+    (as this makes it impossible to distinguish between a mention of the function
+    and a call to the function with zero arguments).
+
+#### Exporting
+
+-   Export PNG by selecting everything and then using these settings:
+    -   Zoom: 100%
+    -   Border Width: 4 pixels
+    -   Selection Only
+        -   Crop
+
+-   Do *not* select "Transparent Background", "Shadow", "Embed Images",
+    or "Include a copy of my diagram".
+
+
+Ref: [concept-maps/](https://github.com/rstudio/concept-maps/)
+Credits: Greg Wilson
+
+## Publish your work online
+
+Sharing on Short Notice: How to Get Your Materials Online With R Markdown - RStudio
+https://www.rstudio.com/resources/webinars/sharing-on-short-notice-how-to-get-your-materials-online-with-r-markdown/
+
+See [this](https://www.corradolanera.it/2020/05/23/accuratezza-sensibilit%C3%A0-specificit%C3%A0-prevalenza-e-valori-predittivi-positivo-e-negativo-di-un-test-diagnostico/) as an example.
+
+# Important resources
+
+There are some skills that are useful to develop while you are part of this team, here you can find a quick description
+
+## Download quick-reference cheat sheet
+
+In RStudio -> Help -> Chetsheets ;)
+
+## Improve your R skills
+
+Starting from a deep understanding of what's behind R with [Advanced R](), especially ch1-7.
+
+To have a grasp of the tidyverse, please start from [R for Data Science](https://r4ds.had.co.nz/) 
+
+## Improve your general programming skills
+
+Improve your 10-finger writing skills with this [typing tutor](https://www.tenthumbstypingtutor.com/).
+
+Then proceed to regular expression espressioni regolar with these resources:
+
+- [CRAN](https://cran.r-project.org/web/packages/stringr/vignettes/regular-expressions.html)
+- [R4DS](https://r4ds.had.co.nz/strings.html#strings)
+- [everything else you could need](https://www.regular-expressions.info/)
+
+## Improve your github skills
+
+Follow this tutorial for an introduction [Intro to Git for Scientists](https://github.com/gadenbuie/intro-to-git-for-scientists/blob/main/IntroToGitForScientists.pdf).
+
+Or you can start with a [Youtube video](https://www.youtube.com/watch?v=NVpwCzeFPD8&list=PL9MslR9MhrJbO7u34sgR3J6iMqkFmVenG&index=2).
+
+## Improve your debugging and reproducibility skills
+
+You test your code. We know you do. How else are you sure that your changes don’t break the program? But after you commit, you discard those pesky scripts and throw away code. Don’t you think it’s a bit of a waste to dump all that effort that took you quite a decent chunk of your day to conjure? Well, here you are, so let’s see another way. A better way.
+
+In the words of Hadley Wickham, author of the testthat package, in The R Journal:
+
+    “It’s not that we don’t test our code, it’s that we don’t store our tests so they can be re-run automatically.”
+
+https://codingclubuc3m.rbind.io/post/2019-11-26/
+
+Other resources:
+
+- clear and stable naming/organization (https://style.tidyverse.org/; https://github.com/r-lib/styler)
+- version control (https://git-scm.com/video/what-is-version-control; https://docs.github.com/en/get-started/quickstart/hello-world)
+- documentation (https://www.schlosslab.org/documenting-R/documentingR.html#1; https://r-pkgs.org/man.html)
+- automated tests (https://testthat.r-lib.org/; https://towardsdatascience.com/unit-testing-in-r-68ab9cc8d211; https://codingclubuc3m.rbind.io/post/2019-11-26/; https://mllg.github.io/checkmate/articles/checkmate.html)
+- isolation (https://rstudio.github.io/renv/articles/renv.html)
+- workflows (https://books.ropensci.org/targets/)
+
+## Database management
+
+As a general guide (including protection from common attacks) use [https://db.rstudio.com/](https://db.rstudio.com/)
+
+For Rsqlite use this [guide](https://rsqlite.r-dbi.org/articles/rsqlite)
+
+General interface DBI use [https://dbi.r-dbi.org/articles/dbi](https://dbi.r-dbi.org/articles/dbi)
+
+And use [this website](https://sqlitebrowser.org/) to explore SQLite DBs.
+
+## General knowleadge and books
+
+[Youtube videos of the last Winter School (2022)](https://www.youtube.com/playlist?list=PL8DJJCQPkOSV_JETehL_7HwFMDW4Nrz3n) your can find lectures.
+
+And Introduction to Statistical Learning 2nd edition has been released and can be found on libgen (or ask Corrado for pdf).
